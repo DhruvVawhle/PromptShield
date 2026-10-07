@@ -181,20 +181,19 @@ export function NavigationMenu({
     return () => query.removeEventListener("change", handleChange);
   }, []);
 
-  const surfaceVisible = open;
   const indicatorLabel = hovered ?? null;
-  const onLightSection = !isOnHero && surfaceVisible;
+  // When scrolled past the hero, adopt the page's light/dark surface treatment.
+  // On the hero itself, always use the dark glass header.
+  const onLightSection = !isOnHero;
 
   return (
     <header className={cn("fixed inset-x-0 top-0 z-[60]", className)}>
       <div
         className={cn(
-          "border-b py-3",
-          surfaceVisible
-            ? onLightSection
-              ? "border-border/70 bg-page/90 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.55)] backdrop-blur-xl"
-              : "border-white/10 bg-black/55 shadow-[0_12px_30px_-28px_rgba(0,0,0,0.65)] backdrop-blur-xl"
-            : "border-transparent bg-transparent",
+          "border-b py-3 transition-colors duration-300",
+          onLightSection
+            ? "border-border/70 bg-page/90 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.55)] backdrop-blur-xl"
+            : "border-white/10 bg-[rgba(8,10,14,0.72)] shadow-[0_12px_30px_-28px_rgba(0,0,0,0.65)] backdrop-blur-xl",
         )}
       >
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -322,7 +321,7 @@ export function NavigationMenu({
               animate={reducedMotion ? { opacity: 1 } : { height: "auto", opacity: 1 }}
               exit={reducedMotion ? { opacity: 1 } : { height: 0, opacity: 0 }}
               transition={reducedMotion ? { duration: 0 } : { duration: 0.28, ease: EASE }}
-              className="overflow-hidden border-t border-border/60 md:hidden"
+              className={cn("overflow-hidden border-t md:hidden", onLightSection ? "border-border/60" : "border-white/10")}
             >
               <nav
                 aria-label="Mobile"
