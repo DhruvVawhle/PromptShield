@@ -1,0 +1,214 @@
+.arch-scene {
+  --px: 0;
+  --py: 0;
+  perspective: 1600px;
+  perspective-origin: 52% 42%;
+}
+
+.arch-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 0 8px 22px;
+  transform-style: preserve-3d;
+  transform: rotateX(calc(9deg + var(--py) * 2deg)) rotateY(calc(-9deg + var(--px) * 2deg));
+  will-change: transform;
+  transition: transform 180ms ease;
+}
+
+@media (max-width: 699px) {
+  .arch-stack {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arch-stack {
+    transform: none !important;
+  }
+}
+
+.arch-fill {
+  position: absolute;
+  left: 6px;
+  top: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #60a5fa, #3b82f6);
+  border-radius: 9999px;
+  pointer-events: none;
+  transform: translateZ(40px);
+  z-index: 1;
+}
+
+.arch-packet {
+  position: absolute;
+  left: 6px;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  margin-left: -7px;
+  border-radius: 9999px;
+  background: #60a5fa;
+  border: 2px solid #0e0e10;
+  box-shadow: 0 0 0 6px rgba(96, 165, 250, 0.16), 0 0 18px rgba(96, 165, 250, 0.5);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.arch-slab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 66px;
+  padding: 14px 16px 14px 18px;
+  border-radius: 14px;
+  background: #0e0e10;
+  border: 1px solid #26262b;
+  transform: translateZ(0);
+  transition:
+    border-color 220ms ease,
+    background 220ms ease,
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    opacity 220ms ease;
+}
+
+.arch-slab--outside {
+  background: transparent;
+  border-style: dashed;
+  border-color: #26262b;
+}
+
+.arch-slab[data-state="future"] .arch-slab__name {
+  color: #8a8a93;
+}
+
+.arch-slab[data-state="passed"] .arch-slab__name,
+.arch-slab[data-state="active"] .arch-slab__name {
+  color: #fafafa;
+}
+
+.arch-slab[data-state="active"] {
+  transform: translateZ(36px);
+  background: #151518;
+  border-color: rgba(96, 165, 250, 0.55);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.25), 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.arch-slab__name {
+  font-size: 16.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.arch-slab__name-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.arch-slab__role {
+  font-size: 13.5px;
+  color: #a1a1aa;
+  white-space: nowrap;
+}
+
+@media (max-width: 699px) {
+  .arch-slab {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .arch-slab__role {
+    white-space: normal;
+  }
+
+  .arch-decisions {
+    margin-top: 4px;
+  }
+}
+
+.arch-legend__swatch {
+  width: 18px;
+  height: 0;
+  border-top-width: 1.5px;
+}
+
+.arch-legend__swatch--dashed {
+  border-top-style: dashed;
+  border-top-color: #52525b;
+}
+
+.arch-legend__swatch--solid {
+  border-top-style: solid;
+  border-top-color: #fafafa;
+}
+
+.arch-node {
+  position: absolute;
+  left: -22px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 9999px;
+  border: 2px solid #3f3f46;
+  background: #0e0e10;
+  transition:
+    background 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.arch-node[data-state="passed"] {
+  background: #fafafa;
+  border-color: #fafafa;
+}
+
+.arch-node[data-state="active"] {
+  background: #60a5fa;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.22);
+}
+
+.arch-decisions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.arch-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
+  border: 1px solid #26262b;
+  background: #1a1a1e;
+  color: #a1a1aa;
+  cursor: pointer;
+}
+
+.arch-chip:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.arch-chip[data-selected="true"] {
+  font-weight: 700;
+}
+
+.arch-outcome {
+  transition: opacity 220ms ease;
+}
