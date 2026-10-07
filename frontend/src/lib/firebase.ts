@@ -6,13 +6,13 @@ import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, initializeFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "AIzaSyD3gDYjBXhX2cTrxtUbdXQYLxRjeFiTLkY",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "promptshield-fdea9.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "promptshield-fdea9",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "promptshield-fdea9.firebasestorage.app",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "73586139352",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "1:73586139352:web:4197936d0f0e70f27b77ad",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? "G-1ZDVRSBLJP",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? ,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ??,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ??,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? ,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ??,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ??,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID ?? ,
 } as const;
 
 let appInstance: FirebaseApp | null = null;
