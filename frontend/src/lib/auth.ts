@@ -6,10 +6,7 @@ import {
   signInWithPopup,
   updateProfile,
 } from "firebase/auth";
-import { getFirebaseAnalytics, getFirebaseAuth } from "./firebase";
-import { getOrCreateUserProfile } from "./user-profile";
-
-void getFirebaseAnalytics().catch(() => {});
+import { getFirebaseAuth } from "./firebase";
 
 export interface AuthSubmitValues {
   name: string;
@@ -26,9 +23,6 @@ export async function signInWithCredentials(values: AuthSubmitValues): Promise<A
   const auth = getFirebaseAuth();
   const credential = await signInWithEmailAndPassword(auth, values.email.trim(), values.password);
   void credential.user.getIdToken().catch(() => {});
-  try {
-    await getOrCreateUserProfile(credential.user);
-  } catch {}
   return { ok: true, redirectTo: "/dashboard" };
 }
 
@@ -41,8 +35,6 @@ export async function signUpWithCredentials(values: AuthSubmitValues): Promise<A
   }
   try {
     await credential.user.reload();
-    const updatedUser = auth.currentUser ?? credential.user;
-    await getOrCreateUserProfile(updatedUser);
   } catch {}
   void credential.user.getIdToken().catch(() => {});
   return { ok: true, redirectTo: "/dashboard" };
@@ -55,8 +47,5 @@ export async function signInWithProvider(provider: AuthProvider): Promise<AuthRe
   const firebaseProvider = provider === "google" ? new GoogleAuthProvider() : new GithubAuthProvider();
   const credential = await signInWithPopup(auth, firebaseProvider);
   void credential.user.getIdToken().catch(() => {});
-  try {
-    await getOrCreateUserProfile(credential.user);
-  } catch {}
   return { ok: true, redirectTo: "/dashboard" };
 }

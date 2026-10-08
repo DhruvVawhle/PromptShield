@@ -6,6 +6,7 @@ interface FlowButtonProps {
   href?: string;
   className?: string;
   variant?: "light" | "dark";
+  onClick?: () => void;
 }
 
 export function FlowButton({
@@ -13,6 +14,7 @@ export function FlowButton({
   href = "/login",
   className = "",
   variant = "light",
+  onClick,
 }: FlowButtonProps) {
   const base =
     variant === "dark"
@@ -22,6 +24,7 @@ export function FlowButton({
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={`group relative inline-flex min-h-11 min-w-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full border py-3 pl-4 pr-10 text-xs font-semibold leading-none transition-[border-color,color,transform] duration-[700ms] ease-[cubic-bezier(0.23,1,0.32,1)] hover:text-white active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:active:transform-none sm:pl-5 sm:pr-11 sm:text-sm ${base} ${variant === "dark" ? "focus-visible:ring-black focus-visible:ring-offset-page" : "focus-visible:ring-white focus-visible:ring-offset-black"} ${className}`}
     >
       <ArrowRight
