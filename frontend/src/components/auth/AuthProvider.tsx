@@ -17,6 +17,12 @@ interface AuthContextValue {
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
 
+function devLog(label: string) {
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[Auth] ${label} @ ${performance.now().toFixed(2)}ms`);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<User | null>(null);
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
@@ -25,13 +31,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profileError, setProfileError] = React.useState<ProfileError | null>(null);
 
   const loadProfile = React.useCallback(async (currentUser: User) => {
+    devLog(`loadProfile start for ${currentUser.uid}`);
     setProfileLoading(true);
     setProfileError(null);
     try {
       const userProfile = await getOrCreateUserProfile(currentUser);
+      devLog(`loadProfile success for ${currentUser.uid}`);
       setProfile(userProfile);
       setProfileError(null);
     } catch (error) {
+      devLog(`loadProfile error for ${currentUser.uid}`);
       const err = error as ProfileError;
       const normalized: ProfileError =
         err && typeof err === "object" && "kind" in err
@@ -46,13 +55,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   React.useEffect(() => {
+    devLog("onAuthStateChanged subscribing");
     const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
+        devLog(`onAuthStateChanged: user ${currentUser.uid}`);
         setUser(currentUser);
         setLoading(false);
-        await loadProfile(currentUser);
+        // Load profile in background - don't await
+        loadProfile(currentUser);
       } else {
+        devLog("onAuthStateChanged: signed out");
         setUser(null);
         setProfile(null);
         setProfileError(null);
@@ -60,7 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     });
-    return () => unsubscribe();
+    return () => {
+      devLog("onAuthStateChanged unsubscribing");
+      unsubscribe();
+    };
   }, [loadProfile]);
 
   const retryProfile = React.useCallback(async () => {
@@ -72,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadProfile]);
 
   const handleSignOut = React.useCallback(async () => {
+    devLog("signOut called");
     const auth = getFirebaseAuth();
     await signOut(auth);
     setUser(null);

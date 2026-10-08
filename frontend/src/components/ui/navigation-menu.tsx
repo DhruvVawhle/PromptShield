@@ -8,8 +8,9 @@ import {
   motion,
   useReducedMotion,
 } from "framer-motion";
-import { ArrowRight, Menu, Moon, Sun, X } from "lucide-react";
+import { ArrowRight, Menu, Moon, Sun, X, LogOut, User, Settings, ChevronDown } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { FlowButton } from "@/components/ui/flow-button";
@@ -19,6 +20,16 @@ import {
   ResourcesMenu,
   ResourcesAccordion,
 } from "@/components/layout/ResourcesMenu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { initialsFromName } from "@/lib/user-profile";
+import type { User as FirebaseUser } from "firebase/auth";
+import type { UserProfile } from "@/lib/user-profile";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
@@ -33,17 +44,22 @@ export interface NavigationMenuItem {
 
 export interface NavigationMenuProps {
   items: readonly NavigationMenuItem[];
-  signIn: { label: string; href: string };
-  cta: { label: string; href: string };
   brand?: { label: string; href: string };
   className?: string;
   activePath?: string;
+  user: FirebaseUser | null;
+  profile: UserProfile | null;
+  loading: boolean;
+  onSignOut: () => Promise<void>;
 }
 
-function ThemeToggle({ onLightSection: _onLightSection = false }: { onLightSection?: boolean }) {
+function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => setMounted(true), []);
+  const mounted = React.useSyncExternalStore(
+    React.useCallback(() => () => {}, []),
+    React.useCallback(() => true, []),
+    React.useCallback(() => false, []),
+  );
   const isDark = mounted ? resolvedTheme === "dark" : false;
 
   return (
@@ -72,18 +88,22 @@ function ThemeToggle({ onLightSection: _onLightSection = false }: { onLightSecti
 
 export function NavigationMenu({
   items,
-  signIn,
-  cta,
   brand,
   className,
   activePath,
+  user,
+  profile,
+  loading,
+  onSignOut,
 }: NavigationMenuProps) {
   const reducedMotion = useReducedMotion();
+  const router = useRouter();
 
   const [open, setOpen] = React.useState(false);
   const [hovered, setHovered] = React.useState<string | null>(null);
   const [currentSection, setCurrentSection] = React.useState<string | null>(null);
   const [isOnHero, setIsOnHero] = React.useState(true);
+  const [profileMenuOpen, setProfileMenuOpen] = React.useState(false);
 
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const firstItemRef = React.useRef<HTMLAnchorElement>(null);
@@ -91,11 +111,12 @@ export function NavigationMenu({
   const brandLabel = brand?.label ?? "PromptShield";
   const brandHref = brand?.href ?? "#home";
 
-  // Scroll state is derived from a Framer Motion value via useSyncExternalStore,
-  // so React re-renders only when the header crosses the condensation threshold,
-  // never on every scroll frame.
+  const isAuthenticated = !loading && !!user;
+  const displayName = profile?.name ?? user?.displayName ?? user?.email?.split("@")[0] ?? "User";
+  const email = profile?.email ?? user?.email ?? "";
+  const photoURL = profile?.photoURL ?? user?.photoURL ?? null;
+  const showSkeleton = loading && !user;
 
-  // Active section tracking without a scroll listener.
   const sectionIds = React.useMemo(
     () => items.map((item) => item.sectionId).filter((id): id is string => Boolean(id)),
     [items],
@@ -136,7 +157,6 @@ export function NavigationMenu({
     return () => obs.disconnect();
   }, []);
 
-  // Escape closes the mobile menu and restores focus to the trigger.
   React.useEffect(() => {
     if (!open) return;
 
@@ -151,7 +171,6 @@ export function NavigationMenu({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open]);
 
-  // Move focus into the menu when it opens.
   React.useEffect(() => {
     if (!open) return;
 
@@ -159,7 +178,6 @@ export function NavigationMenu({
     return () => window.cancelAnimationFrame(frame);
   }, [open]);
 
-  // Prevent background scrolling while the mobile menu is open.
   React.useEffect(() => {
     if (!open) return;
 
@@ -170,7 +188,6 @@ export function NavigationMenu({
     };
   }, [open]);
 
-  // Close the mobile menu when returning to the desktop breakpoint.
   React.useEffect(() => {
     const query = window.matchMedia("(min-width: 768px)");
     const handleChange = () => {
@@ -182,9 +199,14 @@ export function NavigationMenu({
   }, []);
 
   const indicatorLabel = hovered ?? null;
-  // When scrolled past the hero, adopt the page's light/dark surface treatment.
-  // On the hero itself, always use the dark glass header.
   const onLightSection = !isOnHero;
+
+  const handleSignOut = async () => {
+    await onSignOut();
+    router.push("/");
+    router.refresh();
+    setProfileMenuOpen(false);
+  };
 
   return (
     <header className={cn("fixed inset-x-0 top-0 z-[60]", className)}>
@@ -255,8 +277,8 @@ export function NavigationMenu({
                           ? "text-foreground"
                           : "text-white"
                         : onLightSection
-                          ? "text-muted-foreground hover:text-foreground"
-                          : "text-white hover:text-white",
+                        ? "text-muted-foreground hover:text-foreground"
+                        : "text-white hover:text-white",
                     )}
                   >
                     {item.label}
@@ -275,19 +297,74 @@ export function NavigationMenu({
           </LayoutGroup>
 
           <div className="hidden shrink-0 items-center gap-2 md:flex">
-            <ThemeToggle onLightSection={onLightSection} />
-            <Link
-              href={signIn.href}
-              className={cn(
-                "rounded-lg px-3 py-2 text-[14px] font-medium leading-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-                onLightSection
-                  ? "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-page"
-                  : "text-white/70 hover:bg-white/10 hover:text-white focus-visible:ring-white focus-visible:ring-offset-black",
-              )}
-            >
-              {signIn.label}
-            </Link>
-            <FlowButton text={cta.label} href={cta.href} variant={onLightSection ? "dark" : "light"} />
+            <ThemeToggle />
+            
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="flex h-8 items-center gap-2 rounded-full bg-white/5 px-3 py-1 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-black focus-visible:ring-offset-2"
+                      aria-label={showSkeleton ? "Loading user" : displayName}
+                      aria-expanded={profileMenuOpen}
+                      onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                    >
+                      {showSkeleton ? (
+                        <span className="h-7 w-7 animate-pulse rounded-full bg-white/20" aria-hidden="true" />
+                      ) : photoURL ? (
+                        <img src={photoURL} alt="" className="h-7 w-7 rounded-full object-cover" />
+                      ) : (
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">
+                          {initialsFromName(displayName)}
+                        </span>
+                      )}
+                      <span className="hidden max-w-[10ch] truncate text-sm font-medium sm:inline">
+                        {showSkeleton ? "…" : displayName}
+                      </span>
+                      <ChevronDown className="hidden h-3.5 w-3.5 text-white/70 sm:block" aria-hidden="true" />
+                    </button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="w-64 bg-slate-900 border-slate-800">
+                  <div className="px-3 py-2 border-b border-slate-800">
+                    <p className="truncate text-sm font-medium text-white">{displayName}</p>
+                    <p className="truncate text-xs text-slate-400">{email || "—"}</p>
+                  </div>
+                  <DropdownMenuItem onClick={() => { router.push("/dashboard"); setProfileMenuOpen(false); }}>
+                    <User className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+                    Dashboard
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { router.push("/settings"); setProfileMenuOpen(false); }}>
+                    <Settings className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="border-slate-800" />
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="text-red-400 focus-visible:text-red-400"
+                  >
+                    <LogOut className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-[14px] font-medium leading-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                    onLightSection
+                      ? "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-page"
+                      : "text-white/70 hover:bg-white/10 hover:text-white focus-visible:ring-white focus-visible:ring-offset-black",
+                  )}
+                >
+                  Sign In
+                </Link>
+                <FlowButton text="Try PromptShield" href="/login" variant={onLightSection ? "dark" : "light"} />
+              </>
+            )}
           </div>
 
           <button
@@ -394,18 +471,65 @@ export function NavigationMenu({
                     <span className="text-sm text-muted-foreground">Appearance</span>
                     <ThemeToggle />
                   </div>
-                  <Link
-                    href={signIn.href}
-                    onClick={() => setOpen(false)}
-                    className="inline-flex items-center justify-center rounded-lg border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-page"
-                  >
-                    {signIn.label}
-                  </Link>
-                  <FlowButton
-                    text={cta.label}
-                    href={cta.href}
-                    className="w-full justify-center"
-                  />
+
+                  {isAuthenticated ? (
+                    <div className="flex flex-col gap-2 border-t border-border/60 pt-4 mt-3">
+                      <div className="flex items-center gap-3 px-3 py-2">
+                        {showSkeleton ? (
+                          <span className="h-9 w-9 animate-pulse rounded-full bg-white/20" aria-hidden="true" />
+                        ) : photoURL ? (
+                          <img src={photoURL} alt="" className="h-9 w-9 rounded-full object-cover" />
+                        ) : (
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-[12px] font-semibold text-background">
+                            {initialsFromName(displayName)}
+                          </span>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate text-sm font-medium text-white">{displayName}</p>
+                          <p className="truncate text-xs text-slate-400">{email || "—"}</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-page"
+                      >
+                        <User className="h-4 w-4" aria-hidden="true" />
+                        Dashboard
+                      </Link>
+                      <Link
+                        href="/settings"
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-page"
+                      >
+                        <Settings className="h-4 w-4" aria-hidden="true" />
+                        Settings
+                      </Link>
+                      <button
+                        onClick={handleSignOut}
+                        className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-sm font-medium text-red-400 transition-colors duration-200 hover:bg-red-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-page"
+                      >
+                        <LogOut className="h-4 w-4" aria-hidden="true" />
+                        Sign out
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Link
+                        href="/login"
+                        onClick={() => setOpen(false)}
+                        className="inline-flex items-center justify-center rounded-lg border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-page"
+                      >
+                        Sign In
+                      </Link>
+                      <FlowButton
+                        text="Try PromptShield"
+                        href="/login"
+                        className="w-full justify-center"
+                        onClick={() => setOpen(false)}
+                      />
+                    </>
+                  )}
                 </div>
               </nav>
             </motion.div>
