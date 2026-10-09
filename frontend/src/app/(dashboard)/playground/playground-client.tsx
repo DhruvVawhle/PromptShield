@@ -51,15 +51,15 @@ export function PlaygroundClient() {
         threatCategory: result.primaryThreatLabel,
         decision: result.decision,
         policy: result.policy.name,
-        confidence: 0.95,
+        confidence: result.confidence ?? null,
         promptLength: promptText.length,
-        model: "gpt-4-turbo",
-        prompt: promptText,
+        model: result.model ?? null,
         sanitizedPrompt: result.sanitizedPrompt ?? null,
       });
       setHistory(prev => [newEvent, ...prev]);
     } catch (e) {
       console.error(e);
+      alert("Recording security event failed.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -122,6 +122,7 @@ export function PlaygroundClient() {
                   onChange={(e) => setPromptText(e.target.value)}
                   placeholder="Type or paste a prompt to analyze..."
                   className="min-h-[200px] h-full resize-none p-4 text-sm leading-relaxed"
+                  disabled={isAnalyzing}
                 />
                 <div className="absolute bottom-3 right-3 text-xs text-muted-foreground">
                   {promptText.length} characters

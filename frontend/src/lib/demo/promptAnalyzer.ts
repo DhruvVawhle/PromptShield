@@ -33,6 +33,8 @@ export type DemoAnalysisResult = {
   threats: DemoThreat[];
   policy: DemoPolicy;
   primaryThreatLabel: string | null;
+  confidence?: number;
+  model?: string;
 };
 
 type PatternDef = { pattern: RegExp; weight: number; category: string; label: string; policy: string; policyId: string };
