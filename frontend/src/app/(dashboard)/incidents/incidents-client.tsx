@@ -190,7 +190,7 @@ export function IncidentsClient() {
 
       {/* Filters Toolbar */}
       <div className="flex flex-wrap items-center gap-3 p-1">
-        <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="h-9 bg-card border border-border text-sm rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm">
+        <select value={period} onChange={(e) => { setPeriod(e.target.value as "7d" | "30d" | "all"); setPage(1); }} className="h-9 bg-card border border-border text-sm rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm">
           <option value="7d">Last 7 days</option>
           <option value="30d">Last 30 days</option>
           <option value="all">All time</option>
