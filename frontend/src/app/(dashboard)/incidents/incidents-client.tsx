@@ -118,6 +118,7 @@ export function IncidentsClient() {
 
   const refreshData = () => {
     if (!user?.uid) return;
+    setError(null);
     setLoading(true);
     const { start, end } = period === "all" ? { start: new Date(0), end: new Date() } : getPeriodDateRange(period);
     listSecurityEvents(user.uid, { startDate: start, endDate: end })
