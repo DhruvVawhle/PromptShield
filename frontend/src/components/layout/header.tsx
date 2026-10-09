@@ -160,8 +160,8 @@ export function Header() {
                 </DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => router.push("/settings?tab=profile")} 
-                className={`px-3 py-2 ${pathname === "/settings" && searchParams.get("tab") === "profile" ? "bg-slate-800 text-white" : "text-slate-200 focus:bg-slate-800/50 focus:text-white"}`}
+                onClick={() => router.push("/profile")} 
+                className={`px-3 py-2 ${pathname.startsWith("/profile") ? "bg-slate-800 text-white" : "text-slate-200 focus:bg-slate-800/50 focus:text-white"}`}
               >
                 <User className="mr-3 h-4 w-4 shrink-0" aria-hidden="true" />
                 Profile
@@ -171,7 +171,7 @@ export function Header() {
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => router.push("/settings")} 
-                className={`px-3 py-2 ${pathname.startsWith("/settings") && searchParams.get("tab") !== "profile" ? "bg-slate-800 text-white" : "text-slate-200 focus:bg-slate-800/50 focus:text-white"}`}
+                className={`px-3 py-2 ${pathname.startsWith("/settings") ? "bg-slate-800 text-white" : "text-slate-200 focus:bg-slate-800/50 focus:text-white"}`}
               >
                 <Settings className="mr-3 h-4 w-4 shrink-0" aria-hidden="true" />
                 Settings
