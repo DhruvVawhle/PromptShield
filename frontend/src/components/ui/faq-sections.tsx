@@ -79,11 +79,6 @@ export default function FaqSections({
                 </div>
                 <div className="px-4 pb-4 sm:px-5 sm:pb-5">
                     <div className="overflow-hidden rounded-2xl border border-border bg-surface-subtle">
-import Image from "next/image";
-
-// (Add this to the top of the file manually if it wasn't there, wait, I can't do that with replace_file_content easily in one go unless I specify the exact line. Let me just use standard img with fetchpriority="high" or loading="eager")
-// Actually, next/image is better. Let's do it in two steps.
-// For now let's just add priority to the img tag. Or even better, I'll use a script to fix it. Wait, I'll just change loading="lazy" to loading="eager" and fetchPriority="high".
                         <img
                             src="/faq-workspace.svg"
                             alt="Minimal workspace preview"
