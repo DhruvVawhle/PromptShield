@@ -69,6 +69,8 @@ export async function callOmniRoute(prompt: string) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
       Accept: "application/json",
+      "HTTP-Referer": "https://github.com/promptshield/promptshield", // Required by OpenRouter
+      "X-Title": "PromptShield", // Recommended by OpenRouter
     },
     body: JSON.stringify({
       model,
@@ -77,6 +79,9 @@ export async function callOmniRoute(prompt: string) {
       stream: false,
     }),
     cache: "no-store",
+  }).catch((err) => {
+    console.error("OmniRoute fetch error:", err);
+    throw err;
   });
 
   if (response.status === 401 || response.status === 403) {
