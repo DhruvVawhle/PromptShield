@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const token = authHeader.split("Bearer ")[1];
     let decodedToken;
     try {
-      decodedToken = await adminAuth.verifyIdToken(token);
+      decodedToken = await adminAuth.verifyIdToken(token, true);
     } catch (e) {
       return NextResponse.json(
         { error: { code: "UNAUTHORIZED", message: "Invalid authentication token." } },
