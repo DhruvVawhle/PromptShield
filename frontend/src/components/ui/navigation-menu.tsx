@@ -212,6 +212,7 @@ export function NavigationMenu({
     router.push("/");
     router.refresh();
     setProfileMenuOpen(false);
+    setOpen(false);
   };
 
   return (
