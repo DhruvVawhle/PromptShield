@@ -102,6 +102,8 @@ export default function DashboardRoutePage() {
           confidence: null,
           promptLength: prompt.length,
           model: null,
+          prompt: r.sanitizedPrompt ?? prompt,
+          sanitizedPrompt: r.sanitizedPrompt ?? null,
         }).catch((error) => {
           console.error("Failed to persist security event:", error)
           setAnalysisError("Analysis completed, but the event could not be saved. Check Firestore connectivity and security rules.")

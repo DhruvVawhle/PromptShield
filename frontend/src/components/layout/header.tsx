@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Bell, Menu, Moon, Search, SunMedium, LogOut, User, Settings, ChevronDown } from "lucide-react"
+import { Bell, Menu, Moon, Search, SunMedium, LogOut, User, Settings, ChevronDown, LayoutDashboard, ChevronRight } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -21,7 +22,7 @@ import { useAuth } from "@/components/auth/AuthProvider"
 
 const appNavItems = [
   { label: "Dashboard", href: "/dashboard" },
-  { label: "Analyze", href: "/dashboard" },
+  { label: "Analyze", href: "/playground" },
   { label: "Threats", href: "/incidents" },
   { label: "Policies", href: "/policies" },
   { label: "Analytics", href: "/analytics" },
@@ -32,6 +33,8 @@ const appNavItems = [
 export function Header() {
   const { setTheme, theme } = useTheme()
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user, profile, profileLoading, profileError } = useAuth()
   const { signOut } = useAuth()
 
@@ -53,8 +56,10 @@ export function Header() {
               }
             />
             <SheetContent side="left" className="w-[280px] p-0 sm:max-w-none">
-              <div className="flex h-[56px] items-center border-b border-border px-4 text-[13px] font-semibold tracking-[0.08em] text-foreground">
-                PROMPTSHIELD
+              <div className="flex h-[56px] items-center border-b border-border px-4">
+                <Link href="/" className="text-[13px] font-semibold tracking-[0.08em] text-foreground hover:opacity-80 transition-opacity">
+                  PROMPTSHIELD
+                </Link>
               </div>
               <nav className="space-y-1 p-3 text-sm">
                 {appNavItems.map((item) => (
@@ -71,7 +76,11 @@ export function Header() {
           </Sheet>
         </div>
 
-        <div className="hidden md:flex items-center text-[13px] font-semibold tracking-[0.08em] text-foreground">PROMPTSHIELD</div>
+        <div className="hidden md:flex items-center">
+          <Link href="/" className="text-[13px] font-semibold tracking-[0.08em] text-foreground hover:opacity-80 transition-opacity">
+            PROMPTSHIELD
+          </Link>
+        </div>
 
         <div className="flex flex-1 justify-center px-2 sm:px-6">
           <div className="relative w-full max-w-[560px]">
@@ -135,35 +144,52 @@ export function Header() {
                 </Button>
               }
             />
-            <DropdownMenuContent align="end" className="w-64">
-              <div className="px-3 py-2 border-b border-border">
-                <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
-                <p className="truncate text-xs text-muted-foreground">{email || "—"}</p>
-                {profileError ? (
-                  <p className="mt-1 text-xs leading-4 text-destructive">Profile offline — {profileError.message}</p>
-                ) : profileLoading ? (
-                  <p className="mt-1 text-xs leading-4 text-muted-foreground">Loading profile…</p>
-                ) : null}
-                {user?.uid ? <p className="mt-1 truncate font-mono text-[10px] text-muted-foreground">{user.uid}</p> : null}
+            <DropdownMenuContent align="end" className="w-72 bg-slate-950/90 backdrop-blur-md border-slate-800 shadow-xl">
+              <div className="px-4 py-3">
+                <p className="truncate text-sm font-semibold text-slate-50">{displayName}</p>
+                <p className="truncate text-xs text-slate-400">{email || "—"}</p>
               </div>
-              <DropdownMenuItem onClick={() => router.push("/settings")}>
-                <Settings className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                Settings
+              <DropdownMenuItem 
+                onClick={() => router.push("/dashboard")} 
+                className={`px-3 py-2 ${pathname.startsWith("/dashboard") ? "bg-slate-800 text-white" : "text-slate-200 focus:bg-slate-800/50 focus:text-white"}`}
+              >
+                <LayoutDashboard className="mr-3 h-4 w-4 shrink-0" aria-hidden="true" />
+                Dashboard
+                <DropdownMenuShortcut>
+                  <ChevronRight className="h-3.5 w-3.5 opacity-50" aria-hidden="true" />
+                </DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/settings?tab=profile")}>
-                <User className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+              <DropdownMenuItem 
+                onClick={() => router.push("/settings?tab=profile")} 
+                className={`px-3 py-2 ${pathname === "/settings" && searchParams.get("tab") === "profile" ? "bg-slate-800 text-white" : "text-slate-200 focus:bg-slate-800/50 focus:text-white"}`}
+              >
+                <User className="mr-3 h-4 w-4 shrink-0" aria-hidden="true" />
                 Profile
+                <DropdownMenuShortcut>
+                  <ChevronRight className="h-3.5 w-3.5 opacity-50" aria-hidden="true" />
+                </DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => router.push("/settings")} 
+                className={`px-3 py-2 ${pathname.startsWith("/settings") && searchParams.get("tab") !== "profile" ? "bg-slate-800 text-white" : "text-slate-200 focus:bg-slate-800/50 focus:text-white"}`}
+              >
+                <Settings className="mr-3 h-4 w-4 shrink-0" aria-hidden="true" />
+                Settings
+                <DropdownMenuShortcut>
+                  <ChevronRight className="h-3.5 w-3.5 opacity-50" aria-hidden="true" />
+                </DropdownMenuShortcut>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="mx-2 bg-slate-800" />
               <DropdownMenuItem
                 onClick={async () => {
                   await signOut()
                   router.push("/login")
                   router.refresh()
                 }}
-                className="text-destructive focus-visible:text-destructive"
+                variant="destructive"
+                className="px-3 py-2"
               >
-                <LogOut className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+                <LogOut className="mr-3 h-4 w-4 shrink-0" aria-hidden="true" />
                 Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>

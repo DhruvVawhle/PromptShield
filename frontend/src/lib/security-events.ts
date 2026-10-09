@@ -11,6 +11,7 @@ import {
   Timestamp,
   onSnapshot,
   type Unsubscribe,
+  type QueryConstraint,
 } from "firebase/firestore";
 import { getFirebaseFirestore } from "./firebase";
 import type { SecurityDecision } from "./demo/promptAnalyzer";
@@ -29,6 +30,8 @@ export interface SecurityEvent {
   confidence: number | null;
   promptLength: number;
   model: string | null;
+  prompt?: string;
+  sanitizedPrompt?: string | null;
 }
 
 export interface CreateSecurityEventInput {
@@ -41,12 +44,16 @@ export interface CreateSecurityEventInput {
   confidence: number | null;
   promptLength: number;
   model: string | null;
+  prompt?: string;
+  sanitizedPrompt?: string | null;
 }
+
+export type SecurityEventWithId = SecurityEvent & { id: string };
 
 export async function createSecurityEvent(
   uid: string,
   input: CreateSecurityEventInput
-): Promise<SecurityEvent> {
+): Promise<SecurityEventWithId> {
   const db = getFirebaseFirestore();
   const ref = await addDoc(collection(db, SECURITY_EVENTS_COLLECTION), {
     uid,
@@ -58,10 +65,8 @@ export async function createSecurityEvent(
     ...input,
     timestamp: Timestamp.now(),
     id: ref.id,
-  } as SecurityEvent & { id: string };
+  } as SecurityEventWithId;
 }
-
-export type SecurityEventWithId = SecurityEvent & { id: string };
 
 export async function listSecurityEvents(
   uid: string,
@@ -72,7 +77,7 @@ export async function listSecurityEvents(
   } = {}
 ): Promise<SecurityEventWithId[]> {
   const db = getFirebaseFirestore();
-  const constraints = [where("uid", "==", uid)];
+  const constraints: QueryConstraint[] = [where("uid", "==", uid)];
 
   if (options.startDate) {
     constraints.push(where("timestamp", ">=", Timestamp.fromDate(options.startDate)));
@@ -103,7 +108,7 @@ export function subscribeSecurityEvents(
   onError?: (error: Error) => void
 ): Unsubscribe {
   const db = getFirebaseFirestore();
-  const constraints = [where("uid", "==", uid)];
+  const constraints: QueryConstraint[] = [where("uid", "==", uid)];
 
   if (options.startDate) {
     constraints.push(where("timestamp", ">=", Timestamp.fromDate(options.startDate)));
@@ -169,7 +174,7 @@ export function computePercentageChange(current: number, previous: number): stri
 export function groupEventsByDay(
   events: SecurityEventWithId[]
 ): Map<string, SecurityEventWithId[]> {
-  const map = new Map<string, SecurityEvent[]>();
+  const map = new Map<string, SecurityEventWithId[]>();
   for (const ev of events) {
     const date = ev.timestamp instanceof Timestamp ? ev.timestamp.toDate() : new Date(ev.timestamp);
     const key = date.toISOString().split("T")[0];
