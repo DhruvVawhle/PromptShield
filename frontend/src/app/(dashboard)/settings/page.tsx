@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { getOmniRouteConfig } from "@/lib/omniroute";
 
-import { AppPagePlaceholder } from "@/components/app/page-placeholder";
+import { SettingsClient } from "./settings-client";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -9,14 +10,13 @@ export const metadata: Metadata = {
 };
 
 export default function SettingsPage() {
+  const omniConfig = getOmniRouteConfig();
+  
   return (
-    <AppPagePlaceholder
-      title="Settings"
-      description="Deployment settings manage model providers, security rules, retention decisions, and operational preferences for the PromptShield control plane."
-      badges={[
-        { label: "Config", tone: "allow" },
-        { label: "Secure", tone: "sanitize" },
-      ]}
+    <SettingsClient 
+      omniRouteUrl={omniConfig.baseUrl}
+      omniRouteModel={omniConfig.model}
+      omniRouteConfigured={!!omniConfig.apiKey}
     />
   );
 }

@@ -22,7 +22,7 @@ export interface AuthResult {
 export async function signInWithCredentials(values: AuthSubmitValues): Promise<AuthResult> {
   const auth = getFirebaseAuth();
   const credential = await signInWithEmailAndPassword(auth, values.email.trim(), values.password);
-  void credential.user.getIdToken().catch(() => {});
+  await credential.user.getIdToken();
   return { ok: true, redirectTo: "/dashboard" };
 }
 
@@ -36,7 +36,7 @@ export async function signUpWithCredentials(values: AuthSubmitValues): Promise<A
   try {
     await credential.user.reload();
   } catch {}
-  void credential.user.getIdToken().catch(() => {});
+  await credential.user.getIdToken();
   return { ok: true, redirectTo: "/dashboard" };
 }
 
@@ -46,6 +46,6 @@ export async function signInWithProvider(provider: AuthProvider): Promise<AuthRe
   const auth = getFirebaseAuth();
   const firebaseProvider = provider === "google" ? new GoogleAuthProvider() : new GithubAuthProvider();
   const credential = await signInWithPopup(auth, firebaseProvider);
-  void credential.user.getIdToken().catch(() => {});
+  await credential.user.getIdToken();
   return { ok: true, redirectTo: "/dashboard" };
 }

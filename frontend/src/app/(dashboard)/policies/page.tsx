@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AppPagePlaceholder } from "@/components/app/page-placeholder";
+import { PoliciesClient } from "./policies-client";
 
 export const metadata: Metadata = {
   title: "Security Policies",
@@ -9,14 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function PoliciesPage() {
-  return (
-    <AppPagePlaceholder
-      title="Security Policies"
-      description="Policy controls define which prompt patterns, categories, and risk thresholds trigger warnings, sanitization, or blocking before the request reaches the model."
-      badges={[
-        { label: "Guardrails", tone: "allow" },
-        { label: "Reviewed", tone: "warn" },
-      ]}
-    />
-  );
+  return <PoliciesClient />;
 }

@@ -12,6 +12,7 @@ import {
   formatRelativeTime,
   type SecurityEventWithId,
 } from "@/lib/security-events";
+import { cn } from "@/lib/utils";
 
 function getSeverity(riskScore: number): "Critical" | "High" | "Medium" | "Low" {
   if (riskScore >= 80) return "Critical";
@@ -117,6 +118,7 @@ export function IncidentsClient() {
 
   const refreshData = () => {
     if (!user?.uid) return;
+    setError(null);
     setLoading(true);
     const { start, end } = period === "all" ? { start: new Date(0), end: new Date() } : getPeriodDateRange(period);
     listSecurityEvents(user.uid, { startDate: start, endDate: end })
@@ -131,26 +133,77 @@ export function IncidentsClient() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Incidents</h1>
-        <p className="text-sm text-muted-foreground">Investigate detected threats, review security decisions, and track incident outcomes.</p>
+    <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl">
+      {/* Page Heading */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+          PROMPTSHIELD <ChevronRight className="h-3 w-3" /> Incidents
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Incidents</h1>
+            <p className="text-muted-foreground mt-1 max-w-2xl">
+              Investigate detected threats, review security decisions, and track incident outcomes.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 bg-surface-subtle border border-border p-3 rounded-xl">
-        <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="bg-surface border border-border text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring">
+      {/* Summary metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="p-1.5 rounded-md bg-primary/10 text-primary">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-medium">Total Events</span>
+          </div>
+          <span className="text-3xl font-bold text-foreground">{loading ? "..." : totalIncidents}</span>
+        </Panel>
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-destructive">
+            <div className="p-1.5 rounded-md bg-destructive/10 text-destructive">
+              <ShieldAlert className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-medium">High+ Severity</span>
+          </div>
+          <span className="text-3xl font-bold text-foreground">{loading ? "..." : highSeverityCount}</span>
+        </Panel>
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-amber-500">
+            <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-500">
+              <Ban className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-medium">Blocked</span>
+          </div>
+          <span className="text-3xl font-bold text-foreground">{loading ? "..." : blockedCount}</span>
+        </Panel>
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-2 text-blue-500">
+            <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500">
+              <Clock className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-medium">Under Review</span>
+          </div>
+          <span className="text-3xl font-bold text-foreground">{loading ? "..." : underReviewCount}</span>
+        </Panel>
+      </div>
+
+      {/* Filters Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 p-1">
+        <select value={period} onChange={(e) => { setPeriod(e.target.value as "7d" | "30d" | "all"); setPage(1); }} className="h-9 bg-card border border-border text-sm rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm">
           <option value="7d">Last 7 days</option>
           <option value="30d">Last 30 days</option>
           <option value="all">All time</option>
         </select>
-        <select value={severityFilter} onChange={(e) => { setSeverityFilter(e.target.value); setPage(1); }} className="bg-surface border border-border text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring">
+        <select value={severityFilter} onChange={(e) => { setSeverityFilter(e.target.value); setPage(1); }} className="h-9 bg-card border border-border text-sm rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm">
           <option value="All">All Severities</option>
           <option value="Critical">Critical</option>
           <option value="High">High</option>
           <option value="Medium">Medium</option>
           <option value="Low">Low</option>
         </select>
-        <select value={decisionFilter} onChange={(e) => { setDecisionFilter(e.target.value); setPage(1); }} className="bg-surface border border-border text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring">
+        <select value={decisionFilter} onChange={(e) => { setDecisionFilter(e.target.value); setPage(1); }} className="h-9 bg-card border border-border text-sm rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm">
           <option value="All">All Decisions</option>
           <option value="Block">Block</option>
           <option value="Sanitize">Sanitize</option>
@@ -164,70 +217,44 @@ export function IncidentsClient() {
             placeholder="Search events..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full bg-surface border border-border text-sm rounded-md pl-9 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full h-9 bg-card border border-border text-sm rounded-md pl-9 pr-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm"
           />
         </div>
-        <button onClick={refreshData} className="p-1.5 border border-border bg-surface rounded-md hover:bg-muted text-muted-foreground transition">
+        <button onClick={refreshData} className="h-9 w-9 flex items-center justify-center border border-border bg-card rounded-md hover:bg-muted text-muted-foreground transition shadow-sm">
           <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Panel className="p-4 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">Total Events</span>
-          </div>
-          <span className="text-2xl font-bold">{loading ? "..." : totalIncidents}</span>
-        </Panel>
-        <Panel className="p-4 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-destructive">
-            <ShieldAlert className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">High+ Severity</span>
-          </div>
-          <span className="text-2xl font-bold">{loading ? "..." : highSeverityCount}</span>
-        </Panel>
-        <Panel className="p-4 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-amber-500">
-            <Ban className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">Blocked</span>
-          </div>
-          <span className="text-2xl font-bold">{loading ? "..." : blockedCount}</span>
-        </Panel>
-        <Panel className="p-4 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-blue-500">
-            <Clock className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-wider">Under Review</span>
-          </div>
-          <span className="text-2xl font-bold">{loading ? "..." : underReviewCount}</span>
-        </Panel>
-      </div>
-
-      <Panel className="overflow-hidden">
+      {/* Events Table */}
+      <Panel className="overflow-hidden border-primary/10 shadow-sm bg-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="border-b border-border bg-surface-subtle">
-                <th className="px-4 py-3 font-medium text-muted-foreground">Event ID</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Severity</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Category</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Decision</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Detected</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground text-right">Actions</th>
+              <tr className="border-b border-border bg-muted/40">
+                <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Event ID</th>
+                <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Severity</th>
+                <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Category</th>
+                <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Decision</th>
+                <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Detected</th>
+                <th className="px-5 py-4 font-medium text-muted-foreground text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">Loading...</td>
+                  <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCw className="h-4 w-4 animate-spin" /> Loading events...
+                    </div>
+                  </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-destructive">{error}</td>
+                  <td colSpan={6} className="px-5 py-12 text-center text-destructive">{error}</td>
                 </tr>
               ) : currentEvents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
                     No security events found matching the criteria.
                   </td>
                 </tr>
@@ -235,20 +262,37 @@ export function IncidentsClient() {
                 currentEvents.map((ev) => {
                   const sev = getSeverity(ev.riskScore);
                   const tone = getSeverityTone(sev);
+                  const isHighSeverity = sev === "Critical" || sev === "High";
                   return (
-                    <tr key={ev.id} className="border-b border-border hover:bg-surface-subtle/50 transition">
-                      <td className="px-4 py-3 font-mono text-xs max-w-[200px] truncate">{ev.promptId}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge tone={tone} label={sev} className="px-2 py-0.5 text-[10px]" />
+                    <tr 
+                      key={ev.id} 
+                      className={cn(
+                        "border-b border-border hover:bg-muted/30 transition group",
+                        isHighSeverity && "bg-destructive/[0.02]"
+                      )}
+                    >
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          {isHighSeverity && <div className="w-1 h-4 rounded-full bg-destructive/60" />}
+                          <span className="font-mono text-xs text-muted-foreground truncate max-w-[120px] lg:max-w-[180px]" title={ev.promptId}>
+                            {ev.promptId}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-4 py-3">{ev.threatCategory || "Uncategorized"}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge tone={getDecisionTone(ev.decision)} label={ev.decision} className="px-2 py-0.5 text-[10px]" />
+                      <td className="px-5 py-4">
+                        <StatusBadge tone={tone} label={sev} className="px-2 py-0.5 text-[11px] font-medium" />
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{formatRelativeTime(ev.timestamp)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => setSelectedEvent(ev)} className="text-xs font-medium text-foreground hover:underline">
-                          View details
+                      <td className="px-5 py-4 font-medium text-foreground">{ev.threatCategory || "Uncategorized"}</td>
+                      <td className="px-5 py-4">
+                        <StatusBadge tone={getDecisionTone(ev.decision)} label={ev.decision} className="px-2 py-0.5 text-[11px] font-medium" />
+                      </td>
+                      <td className="px-5 py-4 text-muted-foreground whitespace-nowrap">{formatRelativeTime(ev.timestamp)}</td>
+                      <td className="px-5 py-4 text-right">
+                        <button 
+                          onClick={() => setSelectedEvent(ev)} 
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+                        >
+                          Review <ChevronRight className="h-3.5 w-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -258,23 +302,26 @@ export function IncidentsClient() {
             </tbody>
           </table>
         </div>
-        {!loading && filteredEvents.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-surface-subtle">
+        {!loading && filteredEvents.length > 0 && pageCount > 1 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-muted/20">
             <span className="text-xs text-muted-foreground">
-              Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, filteredEvents.length)} of {filteredEvents.length}
+              Showing <span className="font-medium text-foreground">{(page - 1) * pageSize + 1}</span> to <span className="font-medium text-foreground">{Math.min(page * pageSize, filteredEvents.length)}</span> of <span className="font-medium text-foreground">{filteredEvents.length}</span>
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <button
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
-                className="p-1 rounded-md hover:bg-surface border border-transparent hover:border-border disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-md bg-card border border-border hover:bg-muted text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
+              <div className="text-xs font-medium bg-primary/10 text-primary px-2.5 py-1 rounded-md">
+                Page {page}
+              </div>
               <button
                 disabled={page === pageCount}
                 onClick={() => setPage(page + 1)}
-                className="p-1 rounded-md hover:bg-surface border border-transparent hover:border-border disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-md bg-card border border-border hover:bg-muted text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -283,62 +330,91 @@ export function IncidentsClient() {
         )}
       </Panel>
 
+      {/* Event Details Drawer */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/20 backdrop-blur-sm" onClick={() => setSelectedEvent(null)}>
-          <div className="w-full max-w-md bg-background border-l border-border h-full shadow-2xl p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-foreground">Event Details</h2>
-              <button onClick={() => setSelectedEvent(null)} className="p-1 rounded-md hover:bg-muted text-muted-foreground">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedEvent(null)}>
+          <div className="w-full max-w-md bg-background border-l border-border h-full shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-8 pb-4 border-b border-border">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Event Review</h2>
+                <p className="text-xs text-muted-foreground font-mono mt-1">{selectedEvent.promptId}</p>
+              </div>
+              <button onClick={() => setSelectedEvent(null)} className="p-2 rounded-full hover:bg-muted text-muted-foreground transition">
                 <X className="h-5 w-5" />
               </button>
             </div>
             
             <div className="space-y-6">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Event ID</p>
-                <p className="font-mono text-sm">{selectedEvent.promptId}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-6 bg-muted/30 p-4 rounded-xl border border-border">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Severity</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Severity</p>
                   <StatusBadge tone={getSeverityTone(getSeverity(selectedEvent.riskScore))} label={getSeverity(selectedEvent.riskScore)} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Decision</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Decision</p>
                   <StatusBadge tone={getDecisionTone(selectedEvent.decision)} label={selectedEvent.decision} />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Risk Score</p>
-                  <p className="text-sm">{selectedEvent.riskScore} / 100</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Risk Score</p>
+                  <p className="text-sm font-semibold">{selectedEvent.riskScore} / 100</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Category</p>
-                  <p className="text-sm">{selectedEvent.threatCategory || "Uncategorized"}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Category</p>
+                  <p className="text-sm font-semibold">{selectedEvent.threatCategory || "Uncategorized"}</p>
                 </div>
               </div>
 
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Detected</p>
-                <p className="text-sm">{selectedEvent.timestamp instanceof Date ? selectedEvent.timestamp.toLocaleString() : selectedEvent.timestamp.toDate().toLocaleString()}</p>
-              </div>
-
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Original Prompt (Sanitized preview)</p>
-                <div className="bg-surface-subtle border border-border p-3 rounded-md">
-                  <p className="text-sm font-mono whitespace-pre-wrap break-words">{selectedEvent.prompt || "No prompt content available"}</p>
-                </div>
-              </div>
-
-              {selectedEvent.sanitizedPrompt && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold border-b border-border pb-2">Analysis Details</h3>
+                
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Sanitized Output</p>
-                  <div className="bg-surface-subtle border border-border p-3 rounded-md border-dashed">
-                    <p className="text-sm font-mono whitespace-pre-wrap break-words text-muted-foreground">{selectedEvent.sanitizedPrompt}</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Detected Time</p>
+                  <p className="text-sm">{selectedEvent.timestamp instanceof Date ? selectedEvent.timestamp.toLocaleString() : (selectedEvent.timestamp as any).toDate().toLocaleString()}</p>
+                </div>
+                
+                {selectedEvent.policy && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Triggered Policy</p>
+                    <p className="text-sm">{selectedEvent.policy}</p>
                   </div>
+                )}
+                
+                {selectedEvent.model && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Target Model</p>
+                    <p className="text-sm">{selectedEvent.model}</p>
+                  </div>
+                )}
+                
+                {selectedEvent.confidence && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Confidence</p>
+                    <p className="text-sm">{(selectedEvent.confidence * 100).toFixed(1)}%</p>
+                  </div>
+                )}
+              </div>
+
+              {(selectedEvent.prompt || selectedEvent.sanitizedPrompt) && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold border-b border-border pb-2">Payload Data</h3>
+                  
+                  {selectedEvent.prompt && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Original Prompt</p>
+                      <div className="bg-card border border-border p-3 rounded-md text-sm font-mono whitespace-pre-wrap break-words text-foreground shadow-sm">
+                        {selectedEvent.prompt}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEvent.sanitizedPrompt && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Sanitized Output</p>
+                      <div className="bg-primary/5 border border-primary/20 p-3 rounded-md text-sm font-mono whitespace-pre-wrap break-words text-primary shadow-sm border-dashed">
+                        {selectedEvent.sanitizedPrompt}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
