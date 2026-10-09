@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 
 const nav = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Analyze", href: "/dashboard", icon: Search, activeMatch: "/dashboard" },
+  { name: "Analyze", href: "/playground", icon: Search, activeMatch: "/playground" },
   { name: "Threats", href: "/incidents", icon: AlertTriangle },
   { name: "Policies", href: "/policies", icon: Shield },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
@@ -22,7 +22,9 @@ export function Sidebar() {
   return (
     <aside className="hidden w-[220px] shrink-0 flex-col border-r border-border bg-surface md:flex">
       <div className="flex h-[56px] items-center px-4">
-        <span className="text-[13px] font-semibold tracking-[0.08em] text-foreground">PROMPTSHIELD</span>
+        <Link href="/" className="text-[13px] font-semibold tracking-[0.08em] text-foreground hover:opacity-80 transition-opacity">
+          PROMPTSHIELD
+        </Link>
       </div>
 
       <nav className="flex-1 px-2 py-3">
@@ -30,7 +32,7 @@ export function Sidebar() {
           {nav.map((item) => {
             const isActive =
               item.name === "Analyze"
-                ? pathname === "/dashboard" || pathname.startsWith("/dashboard")
+                ? pathname === "/playground" || pathname.startsWith("/playground")
                 : pathname === item.href || pathname.startsWith(item.href + "/")
             const Icon = item.icon
             return (

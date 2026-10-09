@@ -53,7 +53,7 @@ export interface NavigationMenuProps {
   onSignOut: () => Promise<void>;
 }
 
-function ThemeToggle() {
+function ThemeToggle({ onLightSection }: { onLightSection?: boolean }) {
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = React.useSyncExternalStore(
     React.useCallback(() => () => {}, []),
@@ -69,16 +69,22 @@ function ThemeToggle() {
       aria-checked={isDark}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="relative inline-flex h-[26px] w-[52px] shrink-0 items-center rounded-full border border-white/15 bg-black px-[2px] transition-colors duration-200 hover:border-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+      className={cn(
+        "relative inline-flex h-[26px] w-[52px] shrink-0 items-center rounded-full border px-[2px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+        onLightSection
+          ? "border-border bg-muted focus-visible:ring-ring focus-visible:ring-offset-page"
+          : "border-white/15 bg-black hover:border-white/25 focus-visible:ring-white/40 focus-visible:ring-offset-black"
+      )}
     >
       <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-[6px]" aria-hidden="true">
-        <Sun className={cn("h-3.5 w-3.5 shrink-0 transition-colors", isDark ? "text-white/35" : "text-white")} />
-        <Moon className={cn("h-3 w-3 shrink-0 transition-colors", isDark ? "text-white" : "text-white/35")} />
+        <Sun className={cn("h-3.5 w-3.5 shrink-0 transition-colors", isDark ? (onLightSection ? "text-muted-foreground" : "text-white/35") : (onLightSection ? "text-foreground" : "text-white"))} />
+        <Moon className={cn("h-3 w-3 shrink-0 transition-colors", isDark ? (onLightSection ? "text-foreground" : "text-white") : (onLightSection ? "text-muted-foreground" : "text-white/35"))} />
       </span>
       <span
         aria-hidden="true"
         className={cn(
-          "relative z-10 inline-flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full bg-white shadow-sm transition-transform duration-200 ease-out",
+          "relative z-10 inline-flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full shadow-sm transition-transform duration-200 ease-out",
+          onLightSection ? "bg-background" : "bg-white",
           isDark ? "translate-x-[26px]" : "translate-x-0",
         )}
       />
@@ -297,7 +303,7 @@ export function NavigationMenu({
           </LayoutGroup>
 
           <div className="hidden shrink-0 items-center gap-2 md:flex">
-            <ThemeToggle />
+            <ThemeToggle onLightSection={onLightSection} />
             
             {isAuthenticated ? (
               <DropdownMenu>
@@ -305,7 +311,12 @@ export function NavigationMenu({
                   render={
                     <button
                       type="button"
-                      className="flex h-8 items-center gap-2 rounded-full bg-white/5 px-3 py-1 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-black focus-visible:ring-offset-2"
+                      className={cn(
+                        "flex h-8 items-center gap-2 rounded-full px-3 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                        onLightSection
+                          ? "bg-muted text-foreground hover:bg-muted/80 focus-visible:ring-ring focus-visible:ring-offset-page"
+                          : "bg-white/5 hover:bg-white/10 focus-visible:ring-white focus-visible:ring-offset-black"
+                      )}
                       aria-label={showSkeleton ? "Loading user" : displayName}
                       aria-expanded={profileMenuOpen}
                       onClick={() => setProfileMenuOpen(!profileMenuOpen)}
@@ -322,7 +333,7 @@ export function NavigationMenu({
                       <span className="hidden max-w-[10ch] truncate text-sm font-medium sm:inline">
                         {showSkeleton ? "…" : displayName}
                       </span>
-                      <ChevronDown className="hidden h-3.5 w-3.5 text-white/70 sm:block" aria-hidden="true" />
+                      <ChevronDown className={cn("hidden h-3.5 w-3.5 sm:block", onLightSection ? "text-muted-foreground" : "text-white/70")} aria-hidden="true" />
                     </button>
                   }
                 />
@@ -469,12 +480,12 @@ export function NavigationMenu({
                 <div className="mt-3 flex flex-col gap-2 border-t border-border/60 pt-4">
                   <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
                     <span className="text-sm text-muted-foreground">Appearance</span>
-                    <ThemeToggle />
+                    <ThemeToggle onLightSection={onLightSection} />
                   </div>
 
                   {isAuthenticated ? (
                     <div className="flex flex-col gap-2 border-t border-border/60 pt-4 mt-3">
-                      <div className="flex items-center gap-3 px-3 py-2">
+                      <div className="flex items-center gap-3 rounded-xl bg-slate-950 px-3 py-2">
                         {showSkeleton ? (
                           <span className="h-9 w-9 animate-pulse rounded-full bg-white/20" aria-hidden="true" />
                         ) : photoURL ? (

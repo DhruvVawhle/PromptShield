@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform, useSpring } from "framer-motion";
 import { FileText, ShieldCheck, Settings } from "lucide-react";
 import { FlowButton } from "@/components/ui/flow-button";
 import AetherRibbonMesh from "@/components/ui/aether-ribbon-mesh";
@@ -12,10 +12,17 @@ const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export function HeroSection() {
   const reducedMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll();
-  const heroY = useTransform(scrollYProgress, [0, 0.4], [0, 72]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.24], [1, 0.7]);
-  const accentY = useTransform(scrollYProgress, [0, 0.5], [0, 120]);
+  const targetRef = React.useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: targetRef,
+    offset: ["start start", "end start"],
+  });
+  
+
+
+  const heroY = useTransform(scrollYProgress, [0, 1], [0, 72]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0.7]);
+  const accentY = useTransform(scrollYProgress, [0, 1], [0, 120]);
 
   const fadeUp = reducedMotion
     ? { initial: false as const, animate: { opacity: 1, y: 0 } }
@@ -27,6 +34,7 @@ export function HeroSection() {
 
   return (
     <section
+      ref={targetRef}
       id="home"
       className="relative overflow-hidden border-b border-white/10 bg-black pb-14 pt-24 sm:pb-14 sm:pt-28 lg:pb-24 lg:pt-28"
     >

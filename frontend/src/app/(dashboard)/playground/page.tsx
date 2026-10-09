@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AppPagePlaceholder } from "@/components/app/page-placeholder";
+import { PlaygroundClient } from "./playground-client";
 
 export const metadata: Metadata = {
   title: "AI Security Playground",
@@ -9,14 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function PlaygroundPage() {
-  return (
-    <AppPagePlaceholder
-      title="AI Security Playground"
-      description="Use the playground to submit sample prompts, review risk scoring, inspect policy outcomes, and evaluate whether a prompt should be allowed, warned, sanitized, or blocked."
-      badges={[
-        { label: "Prompt Test", tone: "allow" },
-        { label: "Risk Review", tone: "warn" },
-      ]}
-    />
-  );
+  return <PlaygroundClient />;
 }

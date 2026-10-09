@@ -39,8 +39,7 @@ export function LenisProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ReactLenis root options={{ autoRaf: false, lerp: 0.09 }}>
-      <LenisScrollSync />
+    <ReactLenis root options={{ lerp: 0.09 }}>
       {children}
     </ReactLenis>
   );
