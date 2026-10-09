@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ChatShell } from "@/components/chat/chat-shell";
+import { ChatClient } from "./chat-client";
 
 export const metadata: Metadata = {
   title: "AI Chat",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ChatPage() {
-  return <ChatShell />;
+  return <ChatClient />;
 }

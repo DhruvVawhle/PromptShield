@@ -28,7 +28,14 @@ export function ProtectedDashboardLayout({ children }: { children: React.ReactNo
   }
 
   if (!user) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-page">
+        <div className="text-center text-muted-foreground">
+          <div className="animate-pulse h-8 w-8 rounded-full border-2 border-primary border-t-transparent mx-auto" />
+          <p className="mt-3 text-sm">Redirecting to login…</p>
+        </div>
+      </div>
+    );
   }
 
   return <AppShell>{children}</AppShell>;
