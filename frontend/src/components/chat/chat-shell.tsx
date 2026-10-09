@@ -226,15 +226,15 @@ export function ChatShell() {
           )
         )
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsThinking(false)
+      const errorMessage = err instanceof Error ? err.message : "An error occurred while contacting the AI provider."
       setMessages((current) => [
         ...current,
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: err.message || "An error occurred while contacting the AI provider.",
-          error: true,
+          content: errorMessage,
         }
       ])
     } finally {

@@ -78,9 +78,10 @@ export async function POST(request: Request) {
     }
 
     // Convert OpenRouter SSE to a simple text stream
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     const stream = new ReadableStream({
       async start(controller) {
-        const reader = response.body?.getReader();
+        reader = response.body?.getReader();
         if (!reader) {
           controller.close();
           return;
@@ -114,10 +115,15 @@ export async function POST(request: Request) {
               }
             }
           }
-        } finally {
           controller.close();
+        } catch (e) {
+          controller.error(e);
+        } finally {
           reader.releaseLock();
         }
+      },
+      cancel() {
+        reader?.cancel();
       }
     });
 
