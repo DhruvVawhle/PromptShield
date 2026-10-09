@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Check, ChevronRight, Copy, Info, RefreshCcw, Shield, ShieldCheck, Sparkles } from "lucide-react"
 
+import { useAuth } from "@/components/auth/AuthProvider"
 import { Button } from "@/components/ui/button"
 import { ChatInput } from "@/components/chat/chat-input"
 import { BlockedMessage } from "@/components/chat/blocked-message"
@@ -164,7 +165,8 @@ export function ChatShell() {
     window.requestAnimationFrame(() => inputRef.current?.focus())
   }
 
-  const handleSubmit = () => {
+  const { user } = useAuth()
+  const handleSubmit = async () => {
     const trimmed = draft.trim()
     if (!trimmed || isProcessing) {
       return
@@ -182,23 +184,62 @@ export function ChatShell() {
     setIsProcessing(true)
     setIsThinking(true)
 
-    window.setTimeout(() => {
-      const outcome = getSecurityOutcome(trimmed)
-      const assistantMessage: DemoMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: outcome.text,
-        decision: outcome.decision,
-        risk: outcome.risk,
-        categories: outcome.categories,
-        signals: outcome.signals,
-        blocked: outcome.blocked,
+    try {
+      const token = await user?.getIdToken() || ""
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ prompt: trimmed }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.error?.message || "Failed to get AI response.")
       }
 
-      setMessages((current) => [...current, assistantMessage])
+      const assistantMessageId = crypto.randomUUID()
+      setMessages((current) => [
+        ...current,
+        {
+          id: assistantMessageId,
+          role: "assistant",
+          content: "",
+        }
+      ])
       setIsThinking(false)
+
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error("Stream not available")
+      const decoder = new TextDecoder()
+      let fullContent = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        fullContent += decoder.decode(value, { stream: true })
+        setMessages((current) =>
+          current.map((msg) =>
+            msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
+          )
+        )
+      }
+    } catch (err: any) {
+      setIsThinking(false)
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: err.message || "An error occurred while contacting the AI provider.",
+          error: true,
+        }
+      ])
+    } finally {
       setIsProcessing(false)
-    }, 2200)
+    }
   }
 
   const showEmptyState = messages.length === 0 && !isThinking && !isProcessing
