@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOmniRouteChatUrl, getOmniRouteConfig, getSafeProviderMessage } from "@/lib/omniroute";
 import { adminAuth } from "@/lib/firebase-admin";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { checkRateLimit } from "@/lib/server/rate-limiter";
 
 export async function POST(request: Request) {
   try {
@@ -39,19 +38,12 @@ export async function POST(request: Request) {
     }
 
     try {
-      if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-        const ratelimit = new Ratelimit({
-          redis: Redis.fromEnv(),
-          limiter: Ratelimit.slidingWindow(10, "10 s"),
-          analytics: true,
-        });
-        const { success } = await ratelimit.limit(`ratelimit_${decodedToken.uid}`);
-        if (!success) {
-          return NextResponse.json(
-            { error: { code: "RATE_LIMITED", message: "Too many requests. Please try again later." } },
-            { status: 429 }
-          );
-        }
+      const success = await checkRateLimit(decodedToken.uid);
+      if (!success) {
+        return NextResponse.json(
+          { error: { code: "RATE_LIMITED", message: "Too many requests. Please try again later." } },
+          { status: 429 }
+        );
       }
     } catch (error) {
       console.warn("Rate limiting failed, proceeding without it", error);
@@ -79,12 +71,50 @@ export async function POST(request: Request) {
       );
     }
 
+    if (prompt.length > 5000) {
+      return NextResponse.json(
+        { error: { code: "PROMPT_TOO_LONG", message: "Prompt exceeds maximum allowed length of 5000 characters." } },
+        { status: 400 }
+      );
+    }
+
+    // Phase 2: Server-side Security Analysis
+    const { analyzePromptServer } = await import("@/lib/server/security-engine");
+    const { persistSecurityEvent } = await import("@/lib/server/persistence");
+    const { getActivePolicyForUser } = await import("@/lib/server/policy-manager");
+    
+    const policy = await getActivePolicyForUser(decodedToken.uid);
+    const analysisResult = await analyzePromptServer(prompt, policy);
+    
+    // Persist event to Firestore for strict auditing
+    await persistSecurityEvent(decodedToken.uid, analysisResult, prompt);
+
+    if (analysisResult.decision === "BLOCK") {
+      return NextResponse.json(
+        { 
+          error: { 
+            code: "SECURITY_BLOCK", 
+            message: "Prompt was blocked by security policies.",
+            details: analysisResult
+          } 
+        },
+        { status: 403 }
+      );
+    }
+
+    // Determine the safe prompt to send to the provider
+    let finalPrompt = prompt;
+    if (analysisResult.decision === "SANITIZE" && analysisResult.sanitizedPrompt) {
+      finalPrompt = analysisResult.sanitizedPrompt;
+    }
+
     const { apiKey, model, baseUrl } = getOmniRouteConfig();
 
     if (!apiKey) {
       throw new Error("OMNIROUTE_API_KEY is not configured.");
     }
 
+    // Ensure we only use finalPrompt going forward
     const response = await fetch(getOmniRouteChatUrl(baseUrl), {
       method: "POST",
       headers: {
@@ -96,7 +126,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: finalPrompt }],
         temperature: 0.2,
         stream: true,
       }),

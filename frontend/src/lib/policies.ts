@@ -38,36 +38,57 @@ export type PolicyWithId = Policy & { id: string };
 
 export type CreatePolicyInput = Omit<Policy, "uid" | "updatedAt" | "isSystem">;
 
+import { getFirebaseAuth } from "./firebase";
+
 export async function createPolicy(uid: string, input: CreatePolicyInput): Promise<PolicyWithId> {
-  const db = getFirebaseFirestore();
-  const ref = await addDoc(collection(db, POLICIES_COLLECTION), {
-    uid,
-    ...input,
-    isSystem: false,
-    updatedAt: Timestamp.now(),
+  const auth = getFirebaseAuth();
+  const token = await auth.currentUser?.getIdToken();
+  const res = await fetch("/api/v1/policies", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(input)
   });
-  return {
-    uid,
-    ...input,
-    isSystem: false,
-    updatedAt: Timestamp.now(),
-    id: ref.id,
-  } as PolicyWithId;
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error || "Failed to create policy");
+  }
+  const data = await res.json();
+  return data.policy;
 }
 
 export async function updatePolicy(id: string, updates: Partial<Omit<Policy, "uid" | "isSystem" | "updatedAt">>): Promise<void> {
-  const db = getFirebaseFirestore();
-  const ref = doc(db, POLICIES_COLLECTION, id);
-  await updateDoc(ref, {
-    ...updates,
-    updatedAt: Timestamp.now(),
+  const auth = getFirebaseAuth();
+  const token = await auth.currentUser?.getIdToken();
+  const res = await fetch(`/api/v1/policies/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(updates)
   });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error || "Failed to update policy");
+  }
 }
 
 export async function deletePolicy(id: string): Promise<void> {
-  const db = getFirebaseFirestore();
-  const ref = doc(db, POLICIES_COLLECTION, id);
-  await deleteDoc(ref);
+  const auth = getFirebaseAuth();
+  const token = await auth.currentUser?.getIdToken();
+  const res = await fetch(`/api/v1/policies/${id}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${token}`
+    }
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(data?.error || "Failed to delete policy");
+  }
 }
 
 export function subscribePolicies(

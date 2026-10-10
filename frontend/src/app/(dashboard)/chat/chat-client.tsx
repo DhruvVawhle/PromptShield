@@ -16,7 +16,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Panel } from "@/components/ui/panel";
 import { MessageLoading } from "@/components/ui/message-loading";
 import Link from "next/link";
-import { checkPrompt } from "@/lib/promptCheck";
+
 import { cn } from "@/lib/utils";
 
 type Message = {
@@ -56,22 +56,6 @@ export function ChatClient() {
     setMessages(prev => [...prev, userMessage]);
     setIsProcessing(true);
 
-    // Run security analysis first
-    const securityCheck = checkPrompt(trimmed);
-    if (!securityCheck.ok) {
-      setMessages(prev => [
-        ...prev, 
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: `⚠️ Blocked by PromptShield\n\n**${securityCheck.heading}**\n${securityCheck.reason}`,
-          error: true,
-        }
-      ]);
-      setIsProcessing(false);
-      return;
-    }
-
     try {
       const token = await user?.getIdToken() || "";
       const res = await fetch("/api/ai", {
@@ -84,8 +68,21 @@ export function ChatClient() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data?.error?.message || "Failed to get AI response.");
+        const data = await res.json().catch(() => null);
+        if (data?.error?.code === "SECURITY_BLOCK") {
+          const details = data.error.details;
+          setMessages(prev => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: `⚠️ Blocked by PromptShield\n\n**Categories:** ${details?.categories?.join(", ") || "Policy Violation"}\n**Risk Score:** ${details?.riskScore || 100} / 100\n\n${details?.reasoning || data.error.message}`,
+              error: true,
+            }
+          ]);
+          return;
+        }
+        throw new Error(data?.error?.message || `Failed to get AI response. Status: ${res.status}`);
       }
 
       const assistantMessageId = crypto.randomUUID();
@@ -449,7 +446,7 @@ export function ChatClient() {
               <h3 className="font-semibold text-sm">Your conversations are secure</h3>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Questions are evaluated locally for basic security risks before being sent to the configured AI provider. Local chat history is ephemeral and not permanently stored in the database.
+              Questions are evaluated dynamically by the PromptShield security engine before being sent to the configured AI provider.
             </p>
           </div>
 
