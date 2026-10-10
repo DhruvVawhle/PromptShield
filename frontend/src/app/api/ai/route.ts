@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getOmniRouteChatUrl, getOmniRouteConfig, getSafeProviderMessage } from "@/lib/omniroute";
 import { adminAuth } from "@/lib/firebase-admin";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 export async function POST(request: Request) {
   try {
@@ -15,13 +17,45 @@ export async function POST(request: Request) {
     let decodedToken;
     try {
       decodedToken = await adminAuth.verifyIdToken(token, true);
-    } catch (e) {
+    } catch (e: unknown) {
+      const code = e && typeof e === "object" && "code" in e ? (e as { code: string }).code : undefined;
+      const clientErrors = [
+        "auth/id-token-revoked",
+        "auth/id-token-expired",
+        "auth/argument-error",
+        "auth/invalid-id-token",
+        "auth/user-disabled",
+      ];
+      if (code && clientErrors.includes(code)) {
+        return NextResponse.json(
+          { error: { code: "UNAUTHORIZED", message: "Invalid authentication token." } },
+          { status: 401 }
+        );
+      }
       return NextResponse.json(
-        { error: { code: "UNAUTHORIZED", message: "Invalid authentication token." } },
-        { status: 401 }
+        { error: { code: "SERVICE_UNAVAILABLE", message: "Authentication service unavailable." } },
+        { status: 503 }
       );
     }
 
+    try {
+      if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+        const ratelimit = new Ratelimit({
+          redis: Redis.fromEnv(),
+          limiter: Ratelimit.slidingWindow(10, "10 s"),
+          analytics: true,
+        });
+        const { success } = await ratelimit.limit(`ratelimit_${decodedToken.uid}`);
+        if (!success) {
+          return NextResponse.json(
+            { error: { code: "RATE_LIMITED", message: "Too many requests. Please try again later." } },
+            { status: 429 }
+          );
+        }
+      }
+    } catch (error) {
+      console.warn("Rate limiting failed, proceeding without it", error);
+    }
     const body = (await request.json().catch(() => ({}))) as {
       prompt?: string;
       model?: string;
@@ -78,9 +112,11 @@ export async function POST(request: Request) {
     }
 
     // Convert OpenRouter SSE to a simple text stream
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let cancelled = false;
     const stream = new ReadableStream({
       async start(controller) {
-        const reader = response.body?.getReader();
+        reader = response.body?.getReader();
         if (!reader) {
           controller.close();
           return;
@@ -108,16 +144,22 @@ export async function POST(request: Request) {
                   if (content) {
                     controller.enqueue(new TextEncoder().encode(content));
                   }
-                } catch (e) {
+                } catch {
                   // ignore parse errors for partial chunks
                 }
               }
             }
           }
+          if (!cancelled) controller.close();
+        } catch (e) {
+          if (!cancelled) controller.error(e);
         } finally {
-          controller.close();
           reader.releaseLock();
         }
+      },
+      cancel() {
+        cancelled = true;
+        reader?.cancel();
       }
     });
 

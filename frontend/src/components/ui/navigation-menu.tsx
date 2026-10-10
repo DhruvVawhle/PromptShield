@@ -212,6 +212,7 @@ export function NavigationMenu({
     router.push("/");
     router.refresh();
     setProfileMenuOpen(false);
+    setOpen(false);
   };
 
   return (
@@ -324,6 +325,7 @@ export function NavigationMenu({
                       {showSkeleton ? (
                         <span className="h-7 w-7 animate-pulse rounded-full bg-white/20" aria-hidden="true" />
                       ) : photoURL ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={photoURL} alt="" className="h-7 w-7 rounded-full object-cover" />
                       ) : (
                         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">
@@ -489,6 +491,7 @@ export function NavigationMenu({
                         {showSkeleton ? (
                           <span className="h-9 w-9 animate-pulse rounded-full bg-white/20" aria-hidden="true" />
                         ) : photoURL ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={photoURL} alt="" className="h-9 w-9 rounded-full object-cover" />
                         ) : (
                           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-[12px] font-semibold text-background">
