@@ -176,11 +176,17 @@ export function PoliciesClient() {
   const systemCount = policies.filter(p => p.isSystem).length;
   const customCount = policies.filter(p => !p.isSystem).length;
 
-  const recentlyUpdatedCount = policies.filter(p => {
-    const d = p.updatedAt?.toDate ? p.updatedAt.toDate() : new Date(p.updatedAt as any);
-    const diffDays = (Date.now() - d.getTime()) / (1000 * 3600 * 24);
-    return diffDays <= 7;
-  }).length;
+  const [recentlyUpdatedCount, setRecentlyUpdatedCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const now = Date.now();
+    const count = policies.filter(p => {
+      const d = p.updatedAt?.toDate ? p.updatedAt.toDate() : new Date(String(p.updatedAt));
+      const diffDays = (now - d.getTime()) / (1000 * 3600 * 24);
+      return diffDays <= 7;
+    }).length;
+    setRecentlyUpdatedCount(count);
+  }, [policies]);
 
   const isGuardrailsActive = activeCount > 0;
 
