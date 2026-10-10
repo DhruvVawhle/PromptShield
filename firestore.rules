@@ -12,5 +12,13 @@ service cloud.firestore {
         && request.resource.data.decision in ['ALLOW', 'WARN', 'SANITIZE', 'BLOCK'];
       allow update, delete: if false;
     }
+    match /policies/{policyId} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+    match /audit_logs/{logId} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
   }
 }

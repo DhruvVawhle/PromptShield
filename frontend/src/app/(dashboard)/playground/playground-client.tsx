@@ -6,8 +6,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { analyzePrompt, EXAMPLE_PROMPTS, type DemoAnalysisResult } from "@/lib/demo/promptAnalyzer";
-import { createSecurityEvent, listSecurityEvents, type SecurityEventWithId, formatRelativeTime } from "@/lib/security-events";
+import { EXAMPLE_PROMPTS } from "@/lib/demo/promptAnalyzer";
+import { listSecurityEvents, type SecurityEventWithId, formatRelativeTime } from "@/lib/security-events";
 import { Shield, ChevronRight, Activity, Clock, Loader2, ShieldAlert, ShieldCheck, Zap, Search, FileText, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ export function PlaygroundClient() {
   const [promptText, setPromptText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [history, setHistory] = useState<SecurityEventWithId[]>([]);
-  const [currentResult, setCurrentResult] = useState<DemoAnalysisResult | null>(null);
+  const [currentResult, setCurrentResult] = useState<any | null>(null);
 
   const loadHistory = React.useCallback(async () => {
     if (!user) return;
@@ -39,27 +39,45 @@ export function PlaygroundClient() {
     if (!promptText.trim() || !user) return;
     setIsAnalyzing(true);
     try {
-      // simulate network delay for realism
-      await new Promise(r => setTimeout(r, 800));
-      const result = analyzePrompt(promptText);
-      setCurrentResult(result);
-      
-      const newEvent = await createSecurityEvent(user.uid, {
-        promptId: crypto.randomUUID(),
-        riskScore: result.riskScore,
-        threatDetected: result.threats.length > 0,
-        threatCategory: result.primaryThreatLabel,
-        decision: result.decision,
-        policy: result.policy.name,
-        confidence: result.confidence ?? null,
-        promptLength: promptText.length,
-        model: result.model ?? null,
-        sanitizedPrompt: result.sanitizedPrompt ?? null,
+      const token = await user.getIdToken();
+      const res = await fetch("/api/v1/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ prompt: promptText })
       });
-      setHistory(prev => [newEvent, ...prev]);
-    } catch (e) {
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error?.message || "Failed to analyze prompt.");
+      }
+
+      const result = await res.json();
+      
+      const toneMap: Record<string, "allow" | "warn" | "block" | "sanitize"> = {
+        "ALLOW": "allow",
+        "WARN": "warn",
+        "SANITIZE": "sanitize",
+        "BLOCK": "block"
+      };
+
+      const mappedResult = {
+        steps: [
+          { id: "1", label: "Prompt Received", status: "complete", result: `${promptText.length} characters` },
+          { id: "2", label: "Threat Detection", status: "complete", result: result.categories.length > 0 ? `Detected: ${result.categories.join(", ")}` : "No threats detected", tone: result.riskLevel === "LOW" ? "allow" : "warn" },
+          { id: "3", label: "Policy Evaluation", status: "complete", result: `Policy: ${result.policyApplied.name} - ${result.reasoning}` },
+          { id: "4", label: "Security Decision", status: "complete", result: result.decision === "SANITIZE" ? `SANITIZE\nSanitized Output: ${result.sanitizedPrompt}` : result.decision, tone: toneMap[result.decision] }
+        ]
+      };
+      
+      setCurrentResult(mappedResult);
+      // Wait a moment for Firestore to be consistent then reload history
+      setTimeout(() => loadHistory(), 500);
+    } catch (e: any) {
       console.error(e);
-      alert("Recording security event failed.");
+      alert(e.message || "Analysis failed.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -183,7 +201,7 @@ export function PlaygroundClient() {
                   { id: "2", label: "Threat Detection", status: "pending" },
                   { id: "3", label: "Policy Evaluation", status: "pending" },
                   { id: "4", label: "Security Decision", status: "pending" },
-                ]).map((step, idx, arr) => (
+                ]).map((step: any, idx: number, arr: any[]) => (
                   <div key={step.id} className="relative pl-6 pb-6 last:pb-0">
                     {idx < arr.length - 1 && (
                       <div className={cn(
