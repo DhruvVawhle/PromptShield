@@ -15,10 +15,23 @@ export async function POST(request: Request) {
     let decodedToken;
     try {
       decodedToken = await adminAuth.verifyIdToken(token, true);
-    } catch (e) {
+    } catch (e: any) {
+      const clientErrors = [
+        "auth/id-token-revoked",
+        "auth/id-token-expired",
+        "auth/argument-error",
+        "auth/invalid-id-token",
+        "auth/user-disabled",
+      ];
+      if (clientErrors.includes(e?.code)) {
+        return NextResponse.json(
+          { error: { code: "UNAUTHORIZED", message: "Invalid authentication token." } },
+          { status: 401 }
+        );
+      }
       return NextResponse.json(
-        { error: { code: "UNAUTHORIZED", message: "Invalid authentication token." } },
-        { status: 401 }
+        { error: { code: "SERVICE_UNAVAILABLE", message: "Authentication service unavailable." } },
+        { status: 503 }
       );
     }
 
@@ -79,6 +92,7 @@ export async function POST(request: Request) {
 
     // Convert OpenRouter SSE to a simple text stream
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let cancelled = false;
     const stream = new ReadableStream({
       async start(controller) {
         reader = response.body?.getReader();
@@ -115,14 +129,15 @@ export async function POST(request: Request) {
               }
             }
           }
-          controller.close();
+          if (!cancelled) controller.close();
         } catch (e) {
-          controller.error(e);
+          if (!cancelled) controller.error(e);
         } finally {
           reader.releaseLock();
         }
       },
       cancel() {
+        cancelled = true;
         reader?.cancel();
       }
     });
