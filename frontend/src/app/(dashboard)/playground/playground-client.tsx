@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { analyzePrompt, EXAMPLE_PROMPTS, type DemoAnalysisResult } from "@/lib/demo/promptAnalyzer";
 import { createSecurityEvent, listSecurityEvents, type SecurityEventWithId, formatRelativeTime } from "@/lib/security-events";
-import { Shield, ChevronRight, Activity, Clock, Server, Loader2, AlertTriangle, CheckCircle2, ShieldAlert, ShieldCheck, Zap, Search, Target, FileText, CheckCircle } from "lucide-react";
+import { Shield, ChevronRight, Activity, Clock, Loader2, ShieldAlert, ShieldCheck, Zap, Search, FileText, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -19,13 +19,7 @@ export function PlaygroundClient() {
   const [history, setHistory] = useState<SecurityEventWithId[]>([]);
   const [currentResult, setCurrentResult] = useState<DemoAnalysisResult | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadHistory();
-    }
-  }, [user]);
-
-  async function loadHistory() {
+  const loadHistory = React.useCallback(async () => {
     if (!user) return;
     try {
       const events = await listSecurityEvents(user.uid, { limit: 10 });
@@ -33,7 +27,13 @@ export function PlaygroundClient() {
     } catch (e) {
       console.error("Failed to load history", e);
     }
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      setTimeout(() => loadHistory(), 0);
+    }
+  }, [user, loadHistory]);
 
   async function handleAnalyze() {
     if (!promptText.trim() || !user) return;
@@ -234,7 +234,7 @@ export function PlaygroundClient() {
                     Threat review <ChevronRight className="h-4 w-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
                   </h4>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                    Detected threats, risk factors, and detailed explanations of the model's findings.
+                    Detected threats, risk factors, and detailed explanations of the model&apos;s findings.
                   </p>
                 </div>
               </CardContent>

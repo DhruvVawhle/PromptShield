@@ -58,13 +58,17 @@ export function IncidentsClient() {
   React.useEffect(() => {
     if (authLoading) return;
     if (!user?.uid) {
-      setEvents([]);
-      setLoading(false);
+      setTimeout(() => {
+        setEvents([]);
+        setLoading(false);
+      }, 0);
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    setTimeout(() => {
+      setLoading(true);
+      setError(null);
+    }, 0);
     let cancelled = false;
 
     const { start, end } = period === "all" ? { start: new Date(0), end: new Date() } : getPeriodDateRange(period);
@@ -138,7 +142,7 @@ export function IncidentsClient() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 bg-surface-subtle border border-border p-3 rounded-xl">
-        <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="bg-surface border border-border text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring">
+        <select value={period} onChange={(e) => setPeriod(e.target.value as "7d" | "30d" | "all")} className="bg-surface border border-border text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring">
           <option value="7d">Last 7 days</option>
           <option value="30d">Last 30 days</option>
           <option value="all">All time</option>

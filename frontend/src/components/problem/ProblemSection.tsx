@@ -24,6 +24,14 @@ export function ProblemSection() {
   const selected = THREATS.find((t) => t.id === selectedId) ?? THREATS[0]!;
   const selectedIndex = THREATS.findIndex((t) => t.id === selectedId);
 
+  // ── Autoplay with progress line (desktop 901px+, motion allowed, non-touch only) ──
+  const autoplayTweenRef = React.useRef<gsap.core.Tween | null>(null);
+  const lockedRef = React.useRef(false);
+  const inViewRef = React.useRef(true);
+  const hoveredSectionRef = React.useRef(false);
+  const currentIndexRef = React.useRef(0);
+  const [isAutoplaying, setIsAutoplaying] = React.useState(false);
+
   const triggerPlay = React.useCallback((retype: boolean) => {
     setRetypeOnPlay(retype);
     setPlayNonce((n) => n + 1);
@@ -43,11 +51,9 @@ export function ProblemSection() {
 
   const handleTabClick = React.useCallback(
     (t: Threat) => {
-      // eslint-disable-next-line react-hooks/immutability -- ref flag, no hook dep
       lockedRef.current = true;
       autoplayTweenRef.current?.kill();
       setIsAutoplaying(false);
-      // eslint-disable-next-line react-hooks/immutability -- intro gate ref
       introDoneRef.current = true;
       setSelectedId(t.id);
       triggerPlay(true);
@@ -57,11 +63,9 @@ export function ProblemSection() {
 
   const handleModeClick = React.useCallback(
     (m: Mode) => {
-      // eslint-disable-next-line react-hooks/immutability -- ref flag, no hook dep
       lockedRef.current = true;
       autoplayTweenRef.current?.kill();
       setIsAutoplaying(false);
-      // eslint-disable-next-line react-hooks/immutability -- intro gate ref
       introDoneRef.current = true;
       if (m === mode) {
         triggerPlay(false);
@@ -75,14 +79,6 @@ export function ProblemSection() {
   const handleAnyInteraction = React.useCallback(() => {
     introDoneRef.current = true;
   }, []);
-
-  // ── Autoplay with progress line (desktop 901px+, motion allowed, non-touch only) ──
-  const autoplayTweenRef = React.useRef<gsap.core.Tween | null>(null);
-  const lockedRef = React.useRef(false);
-  const inViewRef = React.useRef(true);
-  const hoveredSectionRef = React.useRef(false);
-  const currentIndexRef = React.useRef(0);
-  const [isAutoplaying, setIsAutoplaying] = React.useState(false);
 
   React.useEffect(() => {
     currentIndexRef.current = selectedIndex;
@@ -102,13 +98,7 @@ export function ProblemSection() {
     return true;
   }, []);
 
-  const killAutoplay = React.useCallback(() => {
-    autoplayTweenRef.current?.kill();
-    autoplayTweenRef.current = null;
-    setIsAutoplaying(false);
-    const el = tabListRef.current;
-    if (el) el.style.setProperty("--p", "1");
-  }, []);
+
 
   const startAutoplay = React.useCallback(() => {
     if (!canAutoplay()) return;
@@ -124,14 +114,13 @@ export function ProblemSection() {
       duration: 5.5,
       ease: "none",
       onComplete: () => {
-        // eslint-disable-next-line react-hooks/immutability -- read-only check, no dep
         if (lockedRef.current) return;
         if (!canAutoplay()) return;
         go(currentIndexRef.current + 1);
       },
     });
     autoplayTweenRef.current = tween;
-  }, [canAutoplay, go]);
+  }, [canAutoplay, go, setIsAutoplaying]);
 
   const handleStampLanded = React.useCallback(() => {
     if (!canAutoplay()) {
@@ -245,7 +234,7 @@ export function ProblemSection() {
         }
       }
     },
-    [selectedIndex, triggerPlay]
+    [selectedIndex, triggerPlay, setIsAutoplaying]
   );
 
   React.useEffect(() => {

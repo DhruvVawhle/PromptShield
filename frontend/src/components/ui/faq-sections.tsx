@@ -79,6 +79,7 @@ export default function FaqSections({
                 </div>
                 <div className="px-4 pb-4 sm:px-5 sm:pb-5">
                     <div className="overflow-hidden rounded-2xl border border-border bg-surface-subtle">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                             src="/faq-workspace.svg"
                             alt="Minimal workspace preview"
