@@ -274,7 +274,6 @@ function NavAccordion({
   React.useEffect(() => {
     const id = window.setTimeout(() => setOpen(false), 0);
     return () => window.clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   return (

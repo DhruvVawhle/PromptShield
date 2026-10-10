@@ -181,7 +181,7 @@ export function AttackCoverage() {
     if (!section) return;
     const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (mql.matches) {
-      setRevealed(true);
+      setTimeout(() => setRevealed(true), 0);
       return;
     }
     const io = new IntersectionObserver(

@@ -59,13 +59,17 @@ export function IncidentsClient() {
   React.useEffect(() => {
     if (authLoading) return;
     if (!user?.uid) {
-      setEvents([]);
-      setLoading(false);
+      setTimeout(() => {
+        setEvents([]);
+        setLoading(false);
+      }, 0);
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    setTimeout(() => {
+      setLoading(true);
+      setError(null);
+    }, 0);
     let cancelled = false;
 
     const { start, end } = period === "all" ? { start: new Date(0), end: new Date() } : getPeriodDateRange(period);

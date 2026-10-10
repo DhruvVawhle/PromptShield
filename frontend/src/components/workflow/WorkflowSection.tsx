@@ -79,7 +79,7 @@ export function WorkflowSection() {
     return () => {
       anim.kill();
     };
-  }, [active]);
+  }, [active, mounted]);
 
   const goTo = React.useCallback(
     (index: number) => {

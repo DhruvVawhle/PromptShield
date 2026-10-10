@@ -28,7 +28,6 @@ export function CapabilitiesSection() {
   const mainRef = React.useRef<HTMLDivElement>(null)
   const tabWrapRef = React.useRef<HTMLDivElement>(null)
   const tabRefs = React.useRef<Array<HTMLButtonElement | null>>([])
-  const progressRefs = React.useRef<HTMLSpanElement[]>([])
   const panelRef = React.useRef<HTMLDivElement>(null)
   const lenis = useLenis()
 
@@ -178,8 +177,6 @@ export function CapabilitiesSection() {
     applyLocalProgress(activeCap.id, localRef.current)
   }, [activeIdx, mounted])
 
-  const isPinned = mounted && typeof window !== "undefined" && window.matchMedia("(min-width: 901px)").matches !== false
-
   const renderPanelContent = React.useCallback(
     (cap: (typeof CAPABILITIES)[number], progress: number) => {
       if (cap.id === "analyze") return <AnalysisView progress={progress} />
@@ -222,7 +219,7 @@ export function CapabilitiesSection() {
 
       <div ref={wrapRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mt-8 flex flex-wrap items-center gap-2">
-          {PIPELINE.map((stage, i) => {
+          {PIPELINE.map((stage) => {
             const pillActive =
               (stage === "Prompt" && activeCap.railIndex >= 0) ||
               (stage === "Analyze" && activeCap.railIndex >= 1) ||

@@ -165,7 +165,12 @@ All scripts are run from the project root and delegate to the `frontend/` worksp
 
 ### `POST /api/ai`
 
-Proxy a prompt through the OmniRoute gateway.
+Proxy a prompt through the OmniRoute gateway. Requires a valid Firebase Auth ID token in the `Authorization` header.
+
+**Headers:**
+```http
+Authorization: Bearer <firebase_id_token>
+```
 
 **Request body:**
 
@@ -189,12 +194,12 @@ or
 }
 ```
 
-**Error response (`400` / `502`):**
+**Error response (`400` / `401` / `502`):**
 
 ```json
 {
   "error": {
-    "code": "INVALID_PROMPT | MISSING_API_KEY | AUTHENTICATION_FAILED | RATE_LIMITED | PROVIDER_UNAVAILABLE",
+    "code": "INVALID_PROMPT | MISSING_API_KEY | UNAUTHORIZED | RATE_LIMITED | PROVIDER_UNAVAILABLE",
     "message": "Human-readable error"
   }
 }
@@ -243,8 +248,9 @@ Possible `status` values: `available` · `unavailable` · `authentication_failur
 
 1. **Client-side guard** (`promptCheck.ts`) — regex-based pattern matching catches obvious injection, jailbreak, and extraction attacks before the request leaves the browser.
 2. **Server-side proxy** (`/api/ai`) — credentials never reach the client; the Next.js server owns the OmniRoute API key.
-3. **Firebase Auth** — all dashboard routes are gated behind authenticated sessions.
-4. **No raw API key exposure** — `OMNIROUTE_API_KEY` is a server-only env variable; Firebase keys are public-safe.
+3. **Endpoint Security** — `/api/ai` strictly verifies Firebase ID tokens using the Firebase Admin SDK, including token revocation checking.
+4. **Firebase Auth** — all dashboard routes are gated behind authenticated sessions with proper loading states.
+5. **No raw API key exposure** — `OMNIROUTE_API_KEY` is a server-only env variable; Firebase keys are public-safe.
 
 ---
 
