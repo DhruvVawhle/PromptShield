@@ -243,7 +243,7 @@ export function ChatClient() {
                     </div>
                     
                     <div className="bg-muted/30 border border-border rounded-2xl rounded-tl-sm p-4 text-sm text-foreground max-w-[85%] shadow-sm leading-relaxed space-y-4">
-                      <p>Hello! I'm PromptShield's AI Security Assistant.</p>
+                      <p>Hello! I&apos;m PromptShield&apos;s AI Security Assistant.</p>
                       <p>I can help you analyze prompts, explain security risks, review policies, and answer questions about AI security.</p>
                       <p>How can I help you today?</p>
                     </div>
