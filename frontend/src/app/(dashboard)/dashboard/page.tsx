@@ -147,7 +147,6 @@ export default function DashboardRoutePage() {
     if (authLoading) return
     const uid = user?.uid
     if (!uid) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- state sync for signed-out; brief unavoidable transition
       React.startTransition(() => {
         setEvents([])
         setPrevEvents([])
@@ -155,7 +154,6 @@ export default function DashboardRoutePage() {
       })
       return
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- batch state init for authenticated subscribe; guarded by effect lifecycle
     React.startTransition(() => {
       setDataLoading(true)
       setDataError(null)

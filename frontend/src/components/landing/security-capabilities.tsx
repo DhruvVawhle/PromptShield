@@ -105,11 +105,11 @@ export function SecurityCapabilities() {
     const card = cardRef.current
     if (!card) return
     if (prefersReducedMotion()) {
-      setInView(true)
+      setTimeout(() => setInView(true), 0)
       return
     }
     if (typeof IntersectionObserver === "undefined") {
-      setInView(true)
+      setTimeout(() => setInView(true), 0)
       return
     }
     const observer = new IntersectionObserver(

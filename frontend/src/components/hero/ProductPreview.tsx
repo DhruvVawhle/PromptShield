@@ -58,7 +58,7 @@ function RiskCounter({ value, active }: { value: number; active: boolean }) {
   const [display, setDisplay] = React.useState(value);
   const reduced = useReducedMotion();
   React.useEffect(() => {
-    if (reduced || !active) { setDisplay(value); return; }
+    if (reduced || !active) { setTimeout(() => setDisplay(value), 0); return; }
     const t0 = performance.now();
     const dur = 700;
     let raf = 0;
@@ -438,7 +438,12 @@ export function ProductPreview({ reducedMotion }: { reducedMotion: boolean }) {
   }, []);
   const handleThreatPick = React.useCallback((text: string) => { setThreatPick(text); setView("analyze"); }, []);
   const [analyzeKey, setAnalyzeKey] = React.useState(0);
-  React.useEffect(() => { if (threatPick) setAnalyzeKey((k) => k + 1); }, [threatPick]);
+  React.useEffect(() => { 
+    if (threatPick) {
+      const timer = setTimeout(() => setAnalyzeKey((k) => k + 1), 0);
+      return () => clearTimeout(timer);
+    }
+  }, [threatPick]);
 
   return (
     <div ref={stageRef} onPointerMove={onPointerMove} onPointerLeave={onPointerLeave} className={cn("relative mx-auto w-full max-w-[560px] lg:max-w-[640px]", "perspective-[1400px]", "[perspective-origin:55%_45%]")} style={{ perspective: "1400px" }}>

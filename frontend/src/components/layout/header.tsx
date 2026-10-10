@@ -35,7 +35,7 @@ export function Header() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { user, profile, profileLoading, profileError } = useAuth()
+  const { user, profile, profileLoading } = useAuth()
   const { signOut } = useAuth()
 
   const displayName = profile?.name ?? user?.displayName ?? user?.email?.split("@")[0] ?? "User"
@@ -133,6 +133,7 @@ export function Header() {
                   {showSkeleton ? (
                     <span className="h-7 w-7 animate-pulse rounded-full bg-muted" aria-hidden="true" />
                   ) : photoURL ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={photoURL} alt="" className="h-7 w-7 rounded-full object-cover" />
                   ) : (
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">

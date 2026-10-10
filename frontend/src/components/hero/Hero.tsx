@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, useReducedMotion, useScroll, useTransform, useSpring } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { FileText, ShieldCheck, Settings } from "lucide-react";
 import { FlowButton } from "@/components/ui/flow-button";
 import AetherRibbonMesh from "@/components/ui/aether-ribbon-mesh";
