@@ -56,7 +56,6 @@ export async function POST(request: Request) {
     } catch (error) {
       console.warn("Rate limiting failed, proceeding without it", error);
     }
-
     const body = (await request.json().catch(() => ({}))) as {
       prompt?: string;
       model?: string;

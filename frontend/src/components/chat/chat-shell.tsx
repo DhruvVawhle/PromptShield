@@ -159,6 +159,7 @@ export function ChatShell() {
           id: crypto.randomUUID(),
           role: "assistant",
           content: errorMessage,
+          error: true,
         }
       ])
     } finally {

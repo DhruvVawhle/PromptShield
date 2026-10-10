@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AppPagePlaceholder } from "@/components/app/page-placeholder";
+import { AnalyticsClient } from "./analytics-client";
 
 export const metadata: Metadata = {
   title: "Analytics",
@@ -9,14 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function AnalyticsPage() {
-  return (
-    <AppPagePlaceholder
-      title="Analytics"
-      description="The analytics workspace summarizes decision volumes, attack categories, policy trends, and operational posture over time so security teams can understand system behavior."
-      badges={[
-        { label: "Trends", tone: "sanitize" },
-        { label: "Insights", tone: "allow" },
-      ]}
-    />
-  );
+  return <AnalyticsClient />;
 }
