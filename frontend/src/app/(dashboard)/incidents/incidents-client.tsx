@@ -12,6 +12,14 @@ import {
   formatRelativeTime,
   type SecurityEventWithId,
 } from "@/lib/security-events";
+import {
+  updateIncident,
+  getIncidentStatusTone,
+  formatIncidentStatus,
+  VALID_INCIDENT_STATUSES,
+  type IncidentStatus,
+} from "@/lib/incidents";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 function getSeverity(riskScore: number): "Critical" | "High" | "Medium" | "Low" {
@@ -47,11 +55,19 @@ export function IncidentsClient() {
   const [error, setError] = React.useState<string | null>(null);
 
   const [period, setPeriod] = React.useState<"7d" | "30d" | "all">("7d");
+  const [statusFilter, setStatusFilter] = React.useState<string>("All");
   const [severityFilter, setSeverityFilter] = React.useState<string>("All");
   const [decisionFilter, setDecisionFilter] = React.useState<string>("All");
   const [search, setSearch] = React.useState("");
 
   const [selectedEvent, setSelectedEvent] = React.useState<SecurityEventWithId | null>(null);
+
+  // Triage state for selected event
+  const [triageStatus, setTriageStatus] = React.useState<IncidentStatus>("OPEN");
+  const [triageNotes, setTriageNotes] = React.useState("");
+  const [isUpdating, setIsUpdating] = React.useState(false);
+  const [triageError, setTriageError] = React.useState<string | null>(null);
+  const [triageSuccess, setTriageSuccess] = React.useState(false);
 
   const [page, setPage] = React.useState(1);
   const pageSize = 10;
@@ -99,6 +115,7 @@ export function IncidentsClient() {
 
   const filteredEvents = React.useMemo(() => {
     return events.filter((ev) => {
+      if (statusFilter !== "All" && (ev.status || "OPEN") !== statusFilter) return false;
       if (severityFilter !== "All" && getSeverity(ev.riskScore) !== severityFilter) return false;
       if (decisionFilter !== "All" && ev.decision !== decisionFilter.toUpperCase()) return false;
       if (search) {
@@ -110,7 +127,7 @@ export function IncidentsClient() {
       }
       return true;
     });
-  }, [events, severityFilter, decisionFilter, search]);
+  }, [events, statusFilter, severityFilter, decisionFilter, search]);
 
   const pageCount = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
   const currentEvents = filteredEvents.slice((page - 1) * pageSize, page * pageSize);
@@ -118,7 +135,61 @@ export function IncidentsClient() {
   const totalIncidents = events.length;
   const highSeverityCount = events.filter((e) => e.riskScore >= 60).length;
   const blockedCount = events.filter((e) => e.decision === "BLOCK").length;
-  const underReviewCount = 0; // Simulated as we don't have explicit incident review status yet.
+  const underReviewCount = events.filter((e) => (e.status || "OPEN") === "INVESTIGATING").length;
+
+  const handleSelectEvent = (ev: SecurityEventWithId | null) => {
+    setSelectedEvent(ev);
+    if (ev) {
+      setTriageStatus(ev.status || "OPEN");
+      setTriageNotes(ev.resolutionNotes || "");
+      setTriageError(null);
+      setTriageSuccess(false);
+    }
+  };
+
+  const handleUpdateTriage = async () => {
+    if (!selectedEvent) return;
+    setIsUpdating(true);
+    setTriageError(null);
+    setTriageSuccess(false);
+
+    try {
+      const updated = await updateIncident(selectedEvent.id, {
+        status: triageStatus,
+        resolutionNotes: triageNotes,
+      });
+
+      setSelectedEvent((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: updated.status,
+              resolutionNotes: updated.resolutionNotes,
+              resolvedAt: updated.resolvedAt,
+              resolvedBy: updated.resolvedBy,
+            }
+          : null
+      );
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === selectedEvent.id
+            ? {
+                ...e,
+                status: updated.status,
+                resolutionNotes: updated.resolutionNotes,
+                resolvedAt: updated.resolvedAt,
+                resolvedBy: updated.resolvedBy,
+              }
+            : e
+        )
+      );
+      setTriageSuccess(true);
+    } catch (err: unknown) {
+      setTriageError(err instanceof Error ? err.message : "Failed to update incident.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const refreshData = () => {
     if (!user?.uid) return;
@@ -200,6 +271,13 @@ export function IncidentsClient() {
           <option value="30d">Last 30 days</option>
           <option value="all">All time</option>
         </select>
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className="h-9 bg-card border border-border text-sm rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm">
+          <option value="All">All Statuses</option>
+          <option value="OPEN">Open</option>
+          <option value="INVESTIGATING">Investigating</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="FALSE_POSITIVE">False Positive</option>
+        </select>
         <select value={severityFilter} onChange={(e) => { setSeverityFilter(e.target.value); setPage(1); }} className="h-9 bg-card border border-border text-sm rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm">
           <option value="All">All Severities</option>
           <option value="Critical">Critical</option>
@@ -239,6 +317,7 @@ export function IncidentsClient() {
                 <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Severity</th>
                 <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Category</th>
                 <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Decision</th>
+                <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Status</th>
                 <th className="px-5 py-4 font-medium text-muted-foreground whitespace-nowrap">Detected</th>
                 <th className="px-5 py-4 font-medium text-muted-foreground text-right whitespace-nowrap">Actions</th>
               </tr>
@@ -246,7 +325,7 @@ export function IncidentsClient() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
                       <RefreshCw className="h-4 w-4 animate-spin" /> Loading events...
                     </div>
@@ -254,11 +333,11 @@ export function IncidentsClient() {
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-destructive">{error}</td>
+                  <td colSpan={7} className="px-5 py-12 text-center text-destructive">{error}</td>
                 </tr>
               ) : currentEvents.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
                     No security events found matching the criteria.
                   </td>
                 </tr>
@@ -267,6 +346,7 @@ export function IncidentsClient() {
                   const sev = getSeverity(ev.riskScore);
                   const tone = getSeverityTone(sev);
                   const isHighSeverity = sev === "Critical" || sev === "High";
+                  const eventStatus = ev.status || "OPEN";
                   return (
                     <tr 
                       key={ev.id} 
@@ -290,10 +370,13 @@ export function IncidentsClient() {
                       <td className="px-5 py-4">
                         <StatusBadge tone={getDecisionTone(ev.decision)} label={ev.decision} className="px-2 py-0.5 text-[11px] font-medium" />
                       </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge tone={getIncidentStatusTone(eventStatus)} label={formatIncidentStatus(eventStatus)} className="px-2 py-0.5 text-[11px] font-medium" />
+                      </td>
                       <td className="px-5 py-4 text-muted-foreground whitespace-nowrap">{formatRelativeTime(ev.timestamp)}</td>
                       <td className="px-5 py-4 text-right">
                         <button 
-                          onClick={() => setSelectedEvent(ev)} 
+                          onClick={() => handleSelectEvent(ev)} 
                           className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
                         >
                           Review <ChevronRight className="h-3.5 w-3.5" />
@@ -396,6 +479,79 @@ export function IncidentsClient() {
                     <p className="text-sm">{(selectedEvent.confidence * 100).toFixed(1)}%</p>
                   </div>
                 )}
+              </div>
+
+              {/* Incident Triage & Resolution Panel */}
+              <div className="space-y-4 bg-muted/20 p-4 rounded-xl border border-border">
+                <div className="flex items-center justify-between border-b border-border pb-2">
+                  <h3 className="text-sm font-semibold">Triage & Resolution</h3>
+                  <StatusBadge
+                    tone={getIncidentStatusTone(selectedEvent.status || "OPEN")}
+                    label={formatIncidentStatus(selectedEvent.status || "OPEN")}
+                  />
+                </div>
+
+                {triageError && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs rounded-md">
+                    {triageError}
+                  </div>
+                )}
+                {triageSuccess && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-md">
+                    Triage status and resolution notes updated successfully.
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                    Update Status
+                  </label>
+                  <select
+                    value={triageStatus}
+                    onChange={(e) => {
+                      setTriageStatus(e.target.value as IncidentStatus);
+                      setTriageSuccess(false);
+                    }}
+                    className="w-full h-9 bg-card border border-border text-sm rounded-md px-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm"
+                  >
+                    {VALID_INCIDENT_STATUSES.map((st) => (
+                      <option key={st} value={st}>
+                        {formatIncidentStatus(st)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1.5">
+                    Resolution Notes
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={triageNotes}
+                    onChange={(e) => {
+                      setTriageNotes(e.target.value);
+                      setTriageSuccess(false);
+                    }}
+                    placeholder="Document investigation findings, false positive justifications, or remediation actions..."
+                    className="w-full bg-card border border-border text-sm rounded-md p-3 focus:outline-none focus:ring-1 focus:ring-ring shadow-sm resize-none"
+                  />
+                </div>
+
+                {selectedEvent.resolvedAt && (
+                  <div className="text-[11px] text-muted-foreground">
+                    Resolved: {new Date(selectedEvent.resolvedAt).toLocaleString()}
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleUpdateTriage}
+                  disabled={isUpdating}
+                  className="w-full text-xs"
+                  size="sm"
+                >
+                  {isUpdating ? "Saving Triage..." : "Save Triage Changes"}
+                </Button>
               </div>
 
               {(selectedEvent.prompt || selectedEvent.sanitizedPrompt) && (

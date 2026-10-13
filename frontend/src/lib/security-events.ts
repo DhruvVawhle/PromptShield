@@ -16,6 +16,8 @@ import {
 import { getFirebaseFirestore } from "./firebase";
 import type { SecurityDecision } from "./demo/promptAnalyzer";
 
+import type { IncidentStatus } from "./incidents";
+
 export const SECURITY_EVENTS_COLLECTION = "security_events";
 
 export interface SecurityEvent {
@@ -32,6 +34,10 @@ export interface SecurityEvent {
   model: string | null;
   prompt?: string;
   sanitizedPrompt?: string | null;
+  status?: IncidentStatus;
+  resolutionNotes?: string | null;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
 }
 
 export interface CreateSecurityEventInput {

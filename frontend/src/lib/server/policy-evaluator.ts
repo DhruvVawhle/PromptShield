@@ -23,6 +23,24 @@ const DECISION_SEVERITY_ORDER: Record<SecurityDecision, number> = {
 
 /**
  * Deterministically evaluates guardrail policies and rule matches.
+ *
+ * Precedence Hierarchy:
+ * 1. Tier 1: Mandatory Safeguards & Critical System Rules (HIGHEST)
+ *    - Prompt leak extraction (PROMPT_LEAK)
+ *    - Critical credential disclosures (SENSITIVE_DATA CRITICAL)
+ *    - Any CRITICAL rule match
+ *    -> Strictly BLOCKS. Cannot be overridden or downgraded by any user policy.
+ *
+ * 2. Tier 2: Custom Category Action Overrides
+ *    - Evaluated if matched rules have actions defined in activePolicy.customCategoryActions.
+ *    - Severity ranking: BLOCK (3) > SANITIZE (2) > WARN (1) > ALLOW (0).
+ *    - BLOCK: Immediately blocks.
+ *    - SANITIZE: Sanitizes if viable and allowed; fails closed to BLOCK if sanitization is unsafe.
+ *    - WARN / ALLOW: Applies if all matched rules are covered or uncovered rules do not exceed thresholds.
+ *
+ * 3. Tier 3: Quantitative Risk Score Thresholds (BASELINE HEURISTICS)
+ *    - Applies for rules not covered by custom category actions.
+ *    - Evaluates cumulative risk score against maxRiskForAllow and maxRiskForWarn.
  */
 export function evaluatePolicy(
   matchedRules: RuleMatch[],
@@ -40,13 +58,13 @@ export function evaluatePolicy(
     name: activePolicy.name,
   };
 
-  // 1. Critical Rule & Mandatory Category Safeguards (HIGHEST PRECEDENCE)
+  // 1. Critical Rule & Mandatory Category Safeguards (HIGHEST PRECEDENCE - CANNOT BE OVERRIDDEN)
   const hasPromptLeak = matchedRules.some((r) => r.category === "PROMPT_LEAK");
   if (activePolicy.blockPromptLeak && hasPromptLeak) {
     return {
       decision: "BLOCK",
       policyApplied: policyMeta,
-      reasoning: "Prompt extraction attempt detected and strictly blocked by policy.",
+      reasoning: "Prompt extraction attempt detected and strictly blocked by mandatory safeguard.",
     };
   }
 
@@ -55,7 +73,7 @@ export function evaluatePolicy(
     return {
       decision: "BLOCK",
       policyApplied: policyMeta,
-      reasoning: "Credential disclosure attempt detected and strictly blocked by policy.",
+      reasoning: "Credential disclosure attempt detected and strictly blocked by mandatory safeguard.",
     };
   }
 
@@ -64,18 +82,21 @@ export function evaluatePolicy(
     return {
       decision: "BLOCK",
       policyApplied: policyMeta,
-      reasoning: "Critical security violation detected. Request blocked before reaching model.",
+      reasoning: "Critical security violation detected. Request strictly blocked before reaching model.",
     };
   }
 
-  // 2. Check custom category action overrides if configured
-  if (activePolicy.customCategoryActions) {
+  // 2. Custom Category Action Overrides
+  if (activePolicy.customCategoryActions && matchedRules.length > 0) {
     let highestCustomDecision: SecurityDecision | null = null;
     let customReason: string | null = null;
+    const coveredRules: RuleMatch[] = [];
+    const uncoveredRules: RuleMatch[] = [];
 
     for (const match of matchedRules) {
       const customAction = activePolicy.customCategoryActions[match.category];
-      if (customAction) {
+      if (customAction && customAction in DECISION_SEVERITY_ORDER) {
+        coveredRules.push(match);
         if (
           !highestCustomDecision ||
           DECISION_SEVERITY_ORDER[customAction] > DECISION_SEVERITY_ORDER[highestCustomDecision]
@@ -83,19 +104,63 @@ export function evaluatePolicy(
           highestCustomDecision = customAction;
           customReason = `Policy override enforced ${customAction} for category ${match.category} (${match.name}).`;
         }
+      } else {
+        uncoveredRules.push(match);
       }
     }
 
-    if (highestCustomDecision === "BLOCK") {
-      return {
-        decision: "BLOCK",
-        policyApplied: policyMeta,
-        reasoning: customReason ?? "Custom policy category override triggered block.",
-      };
+    if (highestCustomDecision) {
+      if (highestCustomDecision === "BLOCK") {
+        return {
+          decision: "BLOCK",
+          policyApplied: policyMeta,
+          reasoning: customReason ?? "Custom policy category override triggered block.",
+        };
+      }
+
+      if (highestCustomDecision === "SANITIZE") {
+        if (canSanitize && activePolicy.allowSanitization !== false) {
+          return {
+            decision: "SANITIZE",
+            policyApplied: policyMeta,
+            reasoning: customReason ?? "Custom policy category override enforced sanitization.",
+          };
+        } else {
+          // If sanitization is impossible or unsafe, fail closed to BLOCK
+          return {
+            decision: "BLOCK",
+            policyApplied: policyMeta,
+            reasoning: `${customReason ?? "Custom policy category override requested sanitization"}, but prompt could not be safely sanitized. Failing closed to BLOCK.`,
+          };
+        }
+      }
+
+      // For WARN or ALLOW custom actions:
+      // If there are uncovered rules, check if those uncovered rules trigger a BLOCK in Tier 3
+      const uncoveredScore = uncoveredRules.reduce((sum, r) => sum + r.weight, 0);
+      const maxWarn = activePolicy.maxRiskForWarn ?? DEFAULT_GUARDRAIL_POLICY.maxRiskForWarn ?? 49;
+
+      if (uncoveredRules.length === 0 || uncoveredScore <= maxWarn) {
+        if (highestCustomDecision === "WARN") {
+          return {
+            decision: "WARN",
+            policyApplied: policyMeta,
+            reasoning: customReason ?? "Custom policy category override enforced warning.",
+          };
+        }
+
+        if (highestCustomDecision === "ALLOW" && (uncoveredRules.length === 0 || uncoveredScore <= (activePolicy.maxRiskForAllow ?? DEFAULT_GUARDRAIL_POLICY.maxRiskForAllow ?? 24))) {
+          return {
+            decision: "ALLOW",
+            policyApplied: policyMeta,
+            reasoning: customReason ?? "Custom policy category override permitted request.",
+          };
+        }
+      }
     }
   }
 
-  // 3. Quantitative Risk Score Thresholds
+  // 3. Quantitative Risk Score Thresholds (BASELINE HEURISTICS)
   const maxAllow = activePolicy.maxRiskForAllow ?? DEFAULT_GUARDRAIL_POLICY.maxRiskForAllow ?? 24;
   const maxWarn = activePolicy.maxRiskForWarn ?? DEFAULT_GUARDRAIL_POLICY.maxRiskForWarn ?? 49;
 

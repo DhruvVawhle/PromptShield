@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AppPagePlaceholder } from "@/components/app/page-placeholder";
+import { AuditLogsClient } from "./audit-logs-client";
 
 export const metadata: Metadata = {
   title: "Audit Logs",
@@ -9,14 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function AuditLogsPage() {
-  return (
-    <AppPagePlaceholder
-      title="Audit Logs"
-      description="Audit logs record policy modifications, alert decisions, and operational actions so administrators can trace what changed and why."
-      badges={[
-        { label: "Recorded", tone: "allow" },
-        { label: "Traceable", tone: "sanitize" },
-      ]}
-    />
-  );
+  return <AuditLogsClient />;
 }
