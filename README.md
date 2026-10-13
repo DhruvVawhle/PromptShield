@@ -2,26 +2,29 @@
 
 > **Secure Every Prompt** — Analyze, detect, and enforce security decisions before a single token reaches your LLM.
 
-PromptShield is a full-stack Next.js application that acts as a security gateway for AI prompts. Every user message is analyzed for threats, scored for risk, and either allowed, warned, sanitized, or blocked — before it ever reaches the underlying model.
+PromptShield is an enterprise-grade AI security gateway and management platform built on Next.js 16. Every inbound prompt is normalized, analyzed for adversarial threats, evaluated against deterministic custom security policies, scored for risk (0–100), and enforced (`ALLOW`, `WARN`, `SANITIZE`, or `BLOCK`) before it reaches underlying language models or external tools.
 
 ---
 
-## ✨ Features
+## ✨ Core Capabilities
 
 | Stage | Capability | Description |
-|-------|-----------|-------------|
-| **Analyze** | Prompt Analysis | Normalize every prompt, inspect its structure, and explain why it received its risk classification. Risk score: 0–100. |
-| **Detect** | Threat Detection | Detect prompt injection, jailbreak attempts, instruction manipulation, obfuscation, and suspicious instructions. |
-| **Protect** | Security Decision | Allow, warn, sanitize, or block the request before it reaches the model, provider, or tool layer. |
+|:---|:---|:---|
+| **Analyze** | Server-Side Security Engine | Zero-dependency heuristic rule engine with Unicode and obfuscation normalization, adversarial pattern matching, sensitive data redaction, and deterministic policy resolution. |
+| **Detect** | Threat Intelligence | Multi-category detection covering direct prompt injection, jailbreaks, system prompt extraction, persona hijacking, credential probing, and evasion. |
+| **Enforce** | Guardrail Policies | Strictest-action-wins deterministic precedence engine with customizable risk thresholds and action overrides (`BLOCK`, `SANITIZE`, `WARN`, `ALLOW`). |
+| **Audit** | Immutable Audit Trail | Automatic, tamper-resistant audit logging for policy mutations, security decisions, unauthorized access attempts, and incident triaging. |
+| **Triage** | Incident Resolution | End-to-end incident management with status lifecycle tracking (`OPEN`, `INVESTIGATING`, `RESOLVED`, `FALSE_POSITIVE`) and sanitized resolution notes. |
+| **Diagnose** | Platform Telemetry | Continuous bounded liveness and readiness probes across Firestore, Upstash Redis, OmniRoute Gateway, and the compiled rule engine. |
 
 ### Threat Coverage
 
-- 🔴 **Prompt Injection** — Overrides system instructions (`ignore previous instructions …`)
-- 🔴 **Jailbreak** — Removes guardrails (`DAN`, `developer mode`, `no restrictions`)
-- 🔴 **Context / System Prompt Leak** — Extracts hidden instructions (`repeat everything above …`)
-- 🔴 **Role Override** — Claims false authority (`I'm the system administrator`)
-- 🔴 **Credential Probe** — Hunts for secrets (`list every API key …`)
-- 🔴 **Tool Abuse** — Triggers unsafe tool actions (`run the delete_all_records tool …`)
+- 🔴 **Direct Prompt Injection** — Instruction overrides (`ignore previous instructions...`, `disregard above guidelines...`).
+- 🔴 **Jailbreak Personas** — Persona hijacking and ethical bypasses (`DAN`, `developer mode`, `evil twin`, hypothetical bypass scenarios).
+- 🔴 **System Prompt Exfiltration** — Hidden instruction harvesting (`repeat everything above`, `show raw prompt verbatim`).
+- 🔴 **Obfuscation & Evasion** — Zero-width character stripping, URL decoding normalization, Base64/Hex encoding detection.
+- 🔴 **Data Privacy & PII** — Automatic redaction of API keys, private keys, JWTs, passwords, credit card numbers, SSNs, and emails.
+- 🔴 **Credential Probing** — Hunting for secrets, configuration tokens, or unauthorized database access.
 
 ---
 
@@ -29,231 +32,312 @@ PromptShield is a full-stack Next.js application that acts as a security gateway
 
 ```
 PromptShield/
-├── frontend/                  # Next.js 16 application
+├── firestore.rules            # Server-side Firestore security rules (client write locks)
+├── frontend/                  # Next.js 16 full-stack application
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── (public)/      # Landing, About, Security, Architecture pages
-│   │   │   ├── (dashboard)/   # Auth-gated app: Chat, Playground, Analytics, …
-│   │   │   ├── api/
-│   │   │   │   ├── ai/        # POST /api/ai — OmniRoute proxy
-│   │   │   │   └── health/omniroute/  # GET /api/health/omniroute
-│   │   │   └── login/         # Firebase authentication
-│   │   ├── components/
-│   │   │   ├── chat/          # Secured chat shell with live threat status
-│   │   │   ├── capabilities/  # Capability cards (Analyze / Detect / Protect)
-│   │   │   ├── problem/       # Interactive threat demo (6 attack types)
-│   │   │   ├── hero/          # 3-D hero card & shield demo
-│   │   │   └── layout/        # App shell, sidebar, header
+│   │   │   ├── (public)/      # Public pages (Landing, About, Security, Architecture)
+│   │   │   ├── (dashboard)/   # Authenticated dashboard (Chat, Incidents, Policies, Audit Logs, System)
+│   │   │   │   ├── incidents/ # Incident triage and review drawer
+│   │   │   │   ├── policies/  # Custom guardrail policy management
+│   │   │   │   ├── audit-logs/# Immutable audit log explorer
+│   │   │   │   └── system/    # Live platform telemetry and dependency health
+│   │   │   └── api/
+│   │   │       ├── ai/        # POST /api/ai (Secured inference proxy)
+│   │   │       ├── health/    # GET /api/health/omniroute
+│   │   │       └── v1/
+│   │   │           ├── analyze/       # POST /api/v1/analyze (Security Engine)
+│   │   │           ├── policies/      # GET, POST, PUT, DELETE /api/v1/policies
+│   │   │           ├── audit-logs/    # GET /api/v1/audit-logs
+│   │   │           ├── system/status/ # GET /api/v1/system/status
+│   │   │           └── incidents/     # GET, PATCH /api/v1/incidents
+│   │   ├── components/        # Reusable UI & dashboard components
 │   │   └── lib/
-│   │       ├── promptCheck.ts # Client-side pattern-matching guard
-│   │       ├── omniroute.ts   # OmniRoute AI-gateway client + health check
-│   │       ├── firebase.ts    # Firebase SDK initialization
-│   │       └── auth.ts        # Authentication helpers
+│   │       ├── server/        # Server-only modules (Firebase Admin, Security Engine, Normalizer, Rules)
+│   │       │   ├── security-engine.ts
+│   │       │   ├── policy-evaluator.ts
+│   │       │   ├── policy-manager.ts
+│   │       │   ├── persistence.ts
+│   │       │   ├── audit.ts
+│   │       │   ├── system-status.ts
+│   │       │   └── rate-limiter.ts
+│   │       ├── audit-logs.ts  # Client SDK & shared types for Audit Logs
+│   │       ├── incidents.ts   # Client SDK & shared types for Incidents
+│   │       ├── system-status.ts# Client SDK & shared types for System Diagnostics
+│   │       └── omniroute.ts   # OmniRoute AI Gateway integration
 │   └── package.json
-└── package.json               # Root scripts (delegates to frontend/)
+└── package.json               # Root workspace scripts
 ```
-
-**Key decisions:**
-
-- **Next.js App Router** with separate `(public)` and `(dashboard)` route groups for layout isolation.
-- **OmniRoute** acts as an OpenAI-compatible AI gateway. The server-side API route proxies all completions through OmniRoute, keeping credentials off the client.
-- **Firebase Auth** handles user authentication for the dashboard.
-- **Client-side guard** (`promptCheck.ts`) catches obvious attacks in-browser before the request is even sent; the server-side gateway provides a second layer.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) 20+
-- An **OmniRoute** endpoint (or any OpenAI-compatible API gateway)
-- A **Firebase** project (for dashboard authentication)
-
-### 1. Clone the repository
-
-```bash
-git clone <your-repo-url>
-cd PromptShield
-```
-
-### 2. Configure environment variables
-
-```bash
-cp frontend/.env.example frontend/.env.local
-```
-
-Open `frontend/.env.local` and fill in your values:
-
-```env
-# OmniRoute AI gateway
-OMNIROUTE_BASE_URL=http://localhost:20128/v1
-OMNIROUTE_API_KEY=your_api_key_here
-OMNIROUTE_MODEL=auto               # or a specific model id
-
-# Firebase (public — safe to expose)
-NEXT_PUBLIC_FIREBASE_API_KEY=...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-NEXT_PUBLIC_FIREBASE_APP_ID=...
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=...
-```
-
-### 3. Install dependencies
-
-```bash
-npm install
-```
-
-### 4. Start the development server
-
-```bash
-npm run dev
-```
-
-The app is now running at **http://localhost:3000**.
-
----
-
-## 📜 Available Scripts
-
-All scripts are run from the project root and delegate to the `frontend/` workspace.
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start the dev server on `0.0.0.0:3000` |
-| `npm run build` | Production build |
-| `npm run start` | Start the production server on `0.0.0.0:3000` |
-| `npm run lint` | Run ESLint |
-
----
-
-## 🗺️ Pages & Routes
-
-### Public (no login required)
-
-| Route | Description |
-|-------|-------------|
-| `/` | Landing page with hero, threat demo, and capabilities |
-| `/about` | About PromptShield |
-| `/architecture` | System architecture overview |
-| `/security` | Security model documentation |
-| `/contact` | Contact page |
-| `/privacy` | Privacy policy |
-| `/terms` | Terms of service |
-
-### Dashboard (login required)
-
-| Route | Description |
-|-------|-------------|
-| `/dashboard` | Overview & KPIs |
-| `/chat` | Secured chat with live threat detection |
-| `/playground` | Prompt testing sandbox |
-| `/incidents` | Incident log |
-| `/analytics` | Usage & threat analytics |
-| `/policies` | Security policy management |
-| `/audit-logs` | Full audit trail |
-| `/users` | User management |
-| `/settings` | App settings |
-| `/system` | System health & OmniRoute status |
 
 ---
 
 ## 🔌 API Reference
 
-### `POST /api/ai`
-
-Proxy a prompt through the OmniRoute gateway. Requires a valid Firebase Auth ID token in the `Authorization` header.
-
-**Headers:**
+All `/api/v1/*` endpoints require authentication via Bearer token:
 ```http
 Authorization: Bearer <firebase_id_token>
 ```
+The server verifies tokens via Firebase Admin SDK with token revocation checks (`verifyIdToken(token, true)`). The user's `uid` is derived exclusively from the token.
 
-**Request body:**
+### 1. Prompt Analysis & Decision API
+#### `POST /api/v1/analyze`
+Executes server-side prompt normalization, heuristic rule evaluation, custom policy checks, and automated security event persistence.
 
-```json
-{ "prompt": "Your message here" }
-```
-
-or
-
-```json
-{ "messages": [{ "role": "user", "content": "Your message here" }] }
-```
-
-**Success response (`200`):**
-
+**Request Body:**
 ```json
 {
-  "provider": "OmniRoute",
-  "model": "auto",
-  "content": "The model's reply"
+  "prompt": "Summarize this quarterly earnings report...",
+  "stream": false
 }
 ```
 
-**Error response (`400` / `401` / `502`):**
-
+**Response (`200 OK`):**
 ```json
 {
-  "error": {
-    "code": "INVALID_PROMPT | MISSING_API_KEY | UNAUTHORIZED | RATE_LIMITED | PROVIDER_UNAVAILABLE",
-    "message": "Human-readable error"
+  "requestId": "550e8400-e29b-41d4-a716-446655440000",
+  "isMalicious": false,
+  "decision": "ALLOW",
+  "riskScore": 5,
+  "riskLevel": "LOW",
+  "categories": [],
+  "signals": [],
+  "triggeredRuleIds": [],
+  "sanitizedPrompt": null,
+  "reasoning": "No threat indicators detected.",
+  "latencyMs": 4,
+  "policyApplied": {
+    "id": "sys_default_guardrails",
+    "name": "Default Guardrail Policy"
+  },
+  "confidence": 0.95
+}
+```
+
+---
+
+### 2. Guardrail Policy Management API
+- **`GET /api/v1/policies`** — List all system and user-defined guardrail policies.
+- **`POST /api/v1/policies`** — Create a new custom guardrail policy with atomic audit logging.
+- **`PUT /api/v1/policies/[id]`** — Update custom policy configuration, thresholds, or status (`Active` / `Disabled`). System policies cannot be modified (`403 Forbidden`).
+- **`DELETE /api/v1/policies/[id]`** — Delete a custom policy with atomic audit logging. System policies cannot be deleted (`403 Forbidden`).
+
+---
+
+### 3. Audit Log Explorer API
+#### `GET /api/v1/audit-logs`
+Retrieve tamper-resistant audit records scoped strictly to the authenticated tenant.
+
+**Query Parameters:**
+- `action`: Filter by audit action (`POLICY_CREATED`, `POLICY_UPDATED`, `POLICY_DELETED`, `POLICY_ACTIVATION_CHANGED`, `SECURITY_DECISION`, `INCIDENT_STATUS_UPDATED`, `INCIDENT_RESOLVED`).
+- `startDate`, `endDate`: ISO-8601 timestamps.
+- `limit`: Bounded page size (Default: `20`, Max: `100`).
+- `cursor`: Base64 cursor for deterministic pagination.
+
+**Response (`200 OK`):**
+```json
+{
+  "logs": [
+    {
+      "id": "audit-doc-id",
+      "action": "POLICY_CREATED",
+      "timestamp": "2026-10-10T12:00:00.000Z",
+      "details": {
+        "policyName": "Custom Jailbreak Guardrail",
+        "action": "BLOCK"
+      }
+    }
+  ],
+  "pagination": {
+    "limit": 20,
+    "hasMore": false,
+    "nextCursor": null
   }
 }
 ```
 
 ---
 
-### `GET /api/health/omniroute`
+### 4. System Health & Platform Diagnostics API
+#### `GET /api/v1/system/status`
+Reports process liveness and bounded dependency readiness probes (`≤ 3000ms` timeouts, 5-second memoization cache).
 
-Check OmniRoute connectivity and list available models.
+**Query Parameters:**
+- `fresh`: Set to `"true"` to bypass cache and execute fresh dependency probes.
 
-**Response:**
-
+**Response (`200 OK`):**
 ```json
 {
-  "ok": true,
-  "status": "available",
-  "provider": "OmniRoute",
-  "model": "auto",
-  "message": "OmniRoute is available.",
-  "availableModels": ["gpt-4o", "claude-3-5-sonnet"]
+  "status": "healthy",
+  "timestamp": "2026-10-14T00:25:00.000Z",
+  "liveness": {
+    "status": "alive",
+    "uptimeSeconds": 3120,
+    "timestamp": "2026-10-14T00:25:00.000Z",
+    "environment": "production",
+    "nodeVersion": "v22.14.0"
+  },
+  "readiness": {
+    "status": "healthy",
+    "dependencies": [
+      {
+        "name": "Firestore Database",
+        "category": "database",
+        "status": "healthy",
+        "required": true,
+        "message": "Firestore connection active and operational.",
+        "latencyMs": 14,
+        "lastChecked": "2026-10-14T00:25:00.000Z"
+      },
+      {
+        "name": "PromptShield Security Engine",
+        "category": "security_engine",
+        "status": "healthy",
+        "required": true,
+        "message": "Operational with 10 detection rules compiled and verified.",
+        "latencyMs": 2,
+        "lastChecked": "2026-10-14T00:25:00.000Z"
+      },
+      {
+        "name": "Upstash Redis (Rate Limiting)",
+        "category": "cache",
+        "status": "healthy",
+        "required": false,
+        "message": "Redis rate limiting store responsive.",
+        "latencyMs": 8,
+        "lastChecked": "2026-10-14T00:25:00.000Z"
+      },
+      {
+        "name": "OmniRoute AI Gateway",
+        "category": "gateway",
+        "status": "healthy",
+        "required": false,
+        "message": "OmniRoute is available.",
+        "latencyMs": 45,
+        "lastChecked": "2026-10-14T00:25:00.000Z"
+      }
+    ]
+  }
 }
 ```
 
-Possible `status` values: `available` · `unavailable` · `authentication_failure` · `rate_limited` · `model_unavailable` · `unconfigured`
+---
+
+### 5. Incident Triage & Resolution API
+- **`GET /api/v1/incidents`** — List owner-scoped security incidents with filters (`status`, `severity`, `category`, `startDate`, `endDate`) and cursor pagination.
+- **`GET /api/v1/incidents/[id]`** — Retrieve detailed incident metadata (IDOR protected with uniform `404`).
+- **`PATCH /api/v1/incidents/[id]`** — Update triage status (`OPEN`, `INVESTIGATING`, `RESOLVED`, `FALSE_POSITIVE`) and record sanitized resolution notes. Automatically records `INCIDENT_RESOLVED` or `INCIDENT_STATUS_UPDATED` in the audit trail.
+
+---
+
+### 6. Inference Proxy API
+#### `POST /api/ai`
+Proxies validated prompts through the OmniRoute gateway only after prompt security checks and rate limits pass. Fails closed (`502`) if security event persistence fails.
+
+---
+
+## 🔒 Security Model & Guarantees
+
+1. **Client Write Denials (`firestore.rules`)**:
+   - `security_events`, `policies`, and `audit_logs` collections have `allow write: if false;` configured in Firestore security rules.
+   - All mutations must flow through authenticated backend API routes using the trusted Firebase Admin SDK.
+2. **Deterministic Precedence**:
+   - Mandatory safeguards (`BLOCK` decisions on critical exploits) cannot be overridden by custom permissive policies.
+   - Conflicting policies resolve via strictest-action-wins precedence: `BLOCK > SANITIZE > WARN > ALLOW`.
+3. **Data Minimization & Redaction**:
+   - Adversarial payloads and sensitive prompt categories are masked prior to storage.
+   - PII and credentials in resolution notes and audit logs are stripped via `redactSensitiveContent`.
+4. **IDOR Prevention**:
+   - All database reads, updates, and deletes verify document ownership against the verified token UID, returning uniform `404 Not Found` for unowned documents to prevent identifier enumeration.
+5. **Fail-Closed Guarantees**:
+   - Security pipeline errors or persistence failures abort inference requests, preventing un-audited or malicious prompts from reaching the model.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) 20+
+- A [Firebase](https://firebase.google.com/) project (with Firestore and Authentication enabled)
+- (Optional) [Upstash Redis](https://upstash.com/) for distributed rate limiting
+- (Optional) [OmniRoute](https://github.com/DhruvVawhle/OmniRoute) or an OpenAI-compatible gateway
+
+### 1. Clone & Configure
+```bash
+git clone https://github.com/DhruvVawhle/PromptShield.git
+cd PromptShield
+cp frontend/.env.example frontend/.env.local
+```
+
+Populate `frontend/.env.local`:
+```env
+# Firebase Public Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Firebase Admin SDK (Server Credentials)
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxx@your_project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+
+# OmniRoute AI Gateway (Optional)
+OMNIROUTE_BASE_URL=http://localhost:20128/v1
+OMNIROUTE_API_KEY=your_gateway_key
+OMNIROUTE_MODEL=auto
+
+# Upstash Redis (Optional for Rate Limiting)
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_upstash_token
+```
+
+### 2. Install & Run
+```bash
+npm install
+npm run dev
+```
+Open **http://localhost:3000** in your browser.
+
+---
+
+## 🧪 Testing & Verification
+
+Run the full automated test suite (109 tests covering all security engines, persistence, APIs, and route handlers):
+
+```bash
+# Run all server and unit test suites
+npm --prefix frontend run test
+# Or execute directly via Node test runner:
+npx --prefix frontend tsx --tsconfig frontend/tsconfig.json --test frontend/src/lib/server/__tests__/*.test.ts
+
+# Run TypeScript compiler check
+npx --prefix frontend tsc --project frontend/tsconfig.json --noEmit
+
+# Run ESLint
+npm run lint
+
+# Run Next.js Production Build
+npm run build
+```
 
 ---
 
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Framework | [Next.js 16](https://nextjs.org/) (App Router) |
+|:---|:---|
+| Framework | [Next.js 16](https://nextjs.org/) (App Router, Turbopack) |
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS 4 |
-| UI Components | shadcn/ui, Base UI, Radix |
-| Animations | GSAP 3, Framer Motion 13, Lenis |
-| 3D Graphics | Three.js |
-| Charts | Recharts |
-| Auth & DB | Firebase 12 |
+| Component UI | shadcn/ui, Radix UI, Base UI |
+| Graphics & Charts | Three.js, Recharts, Lucide Icons |
+| Backend & Auth | Firebase Admin SDK, Firebase Auth, Cloud Firestore |
+| Rate Limiting | Upstash Redis & `@upstash/ratelimit` |
 | AI Gateway | OmniRoute (OpenAI-compatible) |
-
----
-
-## 🔒 Security Model
-
-1. **Client-side guard** (`promptCheck.ts`) — regex-based pattern matching catches obvious injection, jailbreak, and extraction attacks before the request leaves the browser.
-2. **Server-side proxy** (`/api/ai`) — credentials never reach the client; the Next.js server owns the OmniRoute API key.
-3. **Endpoint Security** — `/api/ai` strictly verifies Firebase ID tokens using the Firebase Admin SDK, including token revocation checking.
-4. **Firebase Auth** — all dashboard routes are gated behind authenticated sessions with proper loading states.
-5. **No raw API key exposure** — `OMNIROUTE_API_KEY` is a server-only env variable; Firebase keys are public-safe.
 
 ---
 
 ## 📄 License
 
-This project is private. All rights reserved.
+This project is licensed under the Apache 2.0 License.
