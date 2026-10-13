@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AppPagePlaceholder } from "@/components/app/page-placeholder";
+import { SystemClient } from "./system-client";
 
 export const metadata: Metadata = {
   title: "System",
@@ -9,14 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function SystemPage() {
-  return (
-    <AppPagePlaceholder
-      title="System"
-      description="System controls provide visibility into provider status, deployment health, and the operational configuration required to keep AI security checks running reliably."
-      badges={[
-        { label: "Health", tone: "allow" },
-        { label: "Provider", tone: "warn" },
-      ]}
-    />
-  );
+  return <SystemClient />;
 }

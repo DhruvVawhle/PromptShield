@@ -6,11 +6,7 @@ service cloud.firestore {
     }
     match /security_events/{eventId} {
       allow read: if request.auth != null && resource.data.uid == request.auth.uid;
-      allow create: if request.auth != null
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.keys().hasAll(['uid', 'promptId', 'timestamp', 'riskScore', 'threatDetected', 'decision', 'promptLength'])
-        && request.resource.data.decision in ['ALLOW', 'WARN', 'SANITIZE', 'BLOCK'];
-      allow update, delete: if false;
+      allow write: if false;
     }
     match /policies/{policyId} {
       allow read: if request.auth != null && resource.data.uid == request.auth.uid;
