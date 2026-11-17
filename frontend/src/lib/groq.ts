@@ -42,17 +42,18 @@ export function getGroqChatUrl(baseUrl = getGroqConfig().baseUrl) {
 export function getSafeGroqMessage(error: unknown) {
   if (error instanceof Error) {
     const message = error.message || "The configured Groq AI provider is unavailable.";
+    const code = (error as Error & { code?: string })?.code;
 
     if (message.includes("GROQ_API_KEY") || message.includes("OMNIROUTE_API_KEY") || message.includes("not configured")) {
       return "The Groq API key is not configured on the server.";
     }
 
-    if (message.includes("401") || message.includes("403") || message.includes("authentication")) {
+    if (message.includes("401") || message.includes("403") || message.includes("authentication") || message.includes("rejected")) {
       return "The Groq provider rejected the configured credentials.";
     }
 
-    if (message.includes("429") || message.includes("rate limit") || message.includes("rate-limited")) {
-      return "The Groq provider rate limit was reached.";
+    if (message.includes("429") || message.includes("rate limit") || message.includes("rate-limited") || code === "RATE_LIMITED") {
+      return "The Groq provider rate limit was reached. Please wait a few seconds and try again.";
     }
 
     if (message.includes("model") || message.includes("not available") || message.includes("model_not_found")) {
@@ -63,7 +64,11 @@ export function getSafeGroqMessage(error: unknown) {
       return "The Groq AI service is currently unavailable.";
     }
 
-    return "The Groq AI engine could not process the request.";
+    if (message && message !== "The AI provider is currently unavailable. Please try again later.") {
+      return message;
+    }
+
+    return "The Groq AI engine is temporarily busy. Please try again in a few moments.";
   }
 
   return "The Groq AI engine could not process the request.";
@@ -78,24 +83,37 @@ export async function callGroq(prompt: string) {
     throw error;
   }
 
-  const response = await fetch(getGroqChatUrl(baseUrl), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2,
-      stream: false,
-    }),
-    cache: "no-store",
-  }).catch((err) => {
+  const sendRequest = async (targetModel: string) => {
+    return await fetch(getGroqChatUrl(baseUrl), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        model: targetModel,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2,
+        stream: false,
+      }),
+      cache: "no-store",
+    });
+  };
+
+  let response = await sendRequest(model).catch((err) => {
     console.error("Groq fetch error:", err);
     throw err;
   });
+
+  if (response.status === 429) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    response = await sendRequest(model).catch(() => response);
+
+    if (response.status === 429 && model !== "openai/gpt-oss-20b") {
+      response = await sendRequest("openai/gpt-oss-20b").catch(() => response);
+    }
+  }
 
   if (response.status === 401 || response.status === 403) {
     const error = new Error("The configured Groq credentials were rejected.");

@@ -39,12 +39,15 @@ export const footerColumns: FooterColumn[] = [
     links: [
       { label: "Security", href: "/security" },
       { label: "Architecture", href: "/architecture" },
-      { label: "Prompt Playground", href: "/#product" },
+      { label: "Prompt Playground", href: "/playground" },
     ],
   },
   {
     title: "Resources",
-    links: [{ label: "FAQ", href: "/#resources" }],
+    links: [
+      { label: "System Status", href: "/system" },
+      { label: "FAQ", href: "/#resources" },
+    ],
   },
   {
     title: "Launch",
@@ -70,7 +73,7 @@ export const footerColumns: FooterColumn[] = [
  * Rendered as non-interactive muted text (not links) so the
  * column matches the reference without creating broken links.
  */
-const resourcesComingSoon = ["Docs", "Blog", "Status"] as const;
+const resourcesComingSoon = ["Docs", "Blog"] as const;
 
 const connectLinks = [
   { label: "GitHub", href: socialLinks.github || "https://github.com", Icon: GithubIcon },

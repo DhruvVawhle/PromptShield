@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Copy, Check, Shield, ChevronDown, TrendingUp, ArrowUpRight } from "lucide-react"
+import { Copy, Check, Shield, ChevronDown, TrendingUp, ArrowUpRight, AlertTriangle } from "lucide-react"
 import {
   AreaChart,
   Area,
@@ -88,11 +88,16 @@ export default function DashboardRoutePage() {
   const [analysisError, setAnalysisError] = React.useState<string | null>(null)
   const [events, setEvents] = React.useState<SecurityEventWithId[]>([])
   const [prevEvents, setPrevEvents] = React.useState<SecurityEventWithId[]>([])
+  const [tokenAnalysis, setTokenAnalysis] = React.useState<any | null>(null)
   const [dataLoading, setDataLoading] = React.useState(true)
   const [dataError, setDataError] = React.useState<string | null>(null)
 
   const runAnalyze = React.useCallback(async () => {
-    if (analyzing || !user) return
+    if (analyzing) return
+    if (!user) {
+      setAnalysisError("Authentication required. Please sign in to analyze prompts.")
+      return
+    }
     setAnalyzing(true)
     setAnalysisError(null)
     try {
@@ -124,10 +129,37 @@ export default function DashboardRoutePage() {
         decision,
         riskScore,
         steps: [
-          { id: "1", label: "Prompt Received", status: "complete" as const, result: `Validated · ${data.latencyMs ?? "—"} ms`, tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block" },
-          { id: "2", label: "Threat Detection", status: "complete" as const, result: threats.length > 0 ? `${threats[0].category} detected` : "No threats found", tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block" },
-          { id: "3", label: "Policy Evaluation", status: "complete" as const, result: data.policyApplied?.name ?? "Default Guardrail Policy", tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block" },
-          { id: "4", label: "Security Decision", status: "complete" as const, result: `${decision} — ${decision === "ALLOW" ? "Forwarded" : decision === "WARN" ? "Forwarded with flag" : decision === "SANITIZE" ? "Transformed" : "Denied"}`, tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block" },
+          {
+            id: "1",
+            label: "Tokenization & Lexical Analysis",
+            status: "complete" as const,
+            result: `${data.tokenAnalysis?.wordCount ?? prompt.trim().split(/\s+/).length} words tokenized · ${data.latencyMs ?? "—"} ms`,
+            tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block",
+          },
+          {
+            id: "2",
+            label: "Stemming & Threat Detection",
+            status: "complete" as const,
+            result:
+              threats.length > 0
+                ? `${threats[0].category}${data.tokenAnalysis?.flaggedTokens?.length ? ` [stem: ${data.tokenAnalysis.flaggedTokens[0].stem}]` : ""}`
+                : "All words & stems verified safe",
+            tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block",
+          },
+          {
+            id: "3",
+            label: "Policy Evaluation",
+            status: "complete" as const,
+            result: data.policyApplied?.name ?? "Default Guardrail Policy",
+            tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block",
+          },
+          {
+            id: "4",
+            label: "Security Decision",
+            status: "complete" as const,
+            result: `${decision} — ${decision === "ALLOW" ? "Forwarded" : decision === "WARN" ? "Forwarded with flag" : decision === "SANITIZE" ? "Transformed" : "Denied"}`,
+            tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block",
+          },
         ],
         sanitizedPrompt,
         reasoning,
@@ -142,6 +174,28 @@ export default function DashboardRoutePage() {
         confidence: data.confidence,
       }
       setResult(r)
+      setTokenAnalysis(data.tokenAnalysis ?? null)
+
+      // Optimistically update events state so dashboard graphs & counters refresh instantly
+      const newEvent: SecurityEventWithId = {
+        id: data.requestId || `ev_${Date.now()}`,
+        uid: user.uid,
+        promptId: data.requestId || `ev_${Date.now()}`,
+        timestamp: new Date().toISOString() as any,
+        riskScore,
+        threatDetected: decision !== "ALLOW" || threats.length > 0,
+        threatCategory: threats[0]?.category ?? null,
+        decision,
+        policy: data.policyApplied?.name ?? "Default Guardrail Policy",
+        confidence: data.confidence ?? null,
+        promptLength: prompt.length,
+        prompt,
+        promptSnippet: prompt.length > 300 ? prompt.slice(0, 300) + "..." : prompt,
+        model: "promptshield-v1",
+        sanitizedPrompt: sanitizedPrompt ?? null,
+        status: "OPEN",
+      }
+      setEvents((prev) => [newEvent, ...prev.filter((e) => e.id !== newEvent.id)])
     } catch (error) {
       console.error("Failed to analyze prompt:", error)
       setAnalysisError(error instanceof Error ? error.message : "Analysis failed. Please try again.")
@@ -300,14 +354,24 @@ export default function DashboardRoutePage() {
           </div>
 
           <Panel className="p-4">
-            <label className="block text-xs font-medium text-muted-foreground">User prompt</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-medium text-muted-foreground">User prompt</label>
+              {activeChip ? (
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Preset: {activeChip}</span>
+              ) : (
+                <span className="text-[10px] font-semibold text-primary uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">Custom Input</span>
+              )}
+            </div>
             <textarea
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e) => {
+                setPrompt(e.target.value)
+                setActiveChip("")
+              }}
               onKeyDown={onKeyDown}
               rows={3}
               className="mt-2 min-h-[96px] w-full resize-y rounded-xl border border-border bg-surface-subtle px-3 py-3 text-[13px] leading-6 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="Summarize this quarterly report in three bullet points."
+              placeholder="Type any custom words or prompt to tokenize, stem, and evaluate..."
             />
             <div className="mt-3 flex flex-wrap gap-1.5">
               {CHIPS.map((c) => (
@@ -364,6 +428,74 @@ export default function DashboardRoutePage() {
               ))}
             </div>
           </Panel>
+
+          {tokenAnalysis && (
+            <Panel className="p-4 border-primary/20 bg-card">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  <Shield className="h-3.5 w-3.5 text-primary" />
+                  Lexical Token & Stem Analysis
+                </p>
+                <span className="text-[11px] font-mono text-muted-foreground">
+                  {tokenAnalysis.wordCount} words · {tokenAnalysis.tokenCount} tokens
+                </span>
+              </div>
+              {tokenAnalysis.flaggedTokens && tokenAnalysis.flaggedTokens.length > 0 ? (
+                <div className="mt-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-destructive flex items-center gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Flagged Adversarial Roots ({tokenAnalysis.flaggedTokens.length})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {tokenAnalysis.flaggedTokens.map((f: any, idx: number) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-mono"
+                        title={f.reason}
+                      >
+                        <span className="font-semibold">{f.token}</span>
+                        <span className="opacity-70 text-[10px]">[{f.stem}]</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2.5 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  All {tokenAnalysis.wordCount} words tokenized, stemmed, and verified safe.
+                </div>
+              )}
+              {tokenAnalysis.tokens && tokenAnalysis.tokens.length > 0 && (
+                <div className="mt-3 pt-2.5 border-t border-border/60">
+                  <p className="text-[11px] text-muted-foreground mb-1.5">Morphological stems evaluated:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {tokenAnalysis.tokens.slice(0, 16).map((tok: string, idx: number) => {
+                      const isFlagged = tokenAnalysis.flaggedTokens?.some((f: any) => f.token === tok);
+                      const stem = tokenAnalysis.stemmedTokens?.[idx] ?? tok;
+                      return (
+                        <span
+                          key={idx}
+                          className={
+                            isFlagged
+                              ? "text-[10px] px-1.5 py-0.5 rounded font-mono border bg-destructive/20 text-destructive border-destructive/40 font-semibold"
+                              : "text-[10px] px-1.5 py-0.5 rounded font-mono border bg-surface-subtle text-foreground/80 border-border"
+                          }
+                          title={`Root: ${stem}`}
+                        >
+                          {tok}
+                        </span>
+                      );
+                    })}
+                    {tokenAnalysis.tokens.length > 16 && (
+                      <span className="text-[10px] text-muted-foreground self-center">
+                        +{tokenAnalysis.tokens.length - 16} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </Panel>
+          )}
 
           <Panel className="p-4">
             <div className="flex items-center justify-between gap-3">
@@ -620,16 +752,48 @@ export default function DashboardRoutePage() {
                 </div>
               ) : (
               <ul className="mt-3 space-y-2.5">
-                {recentEvents.map((ev) => (
-                  <li key={ev.id} className="rounded-xl border border-border bg-surface-subtle px-3 py-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-xs font-semibold text-foreground">{ev.threatCategory ?? "No threat"}</span>
-                      <StatusBadge tone={(ev.decision === "BLOCK" ? "block" : ev.decision === "WARN" ? "warn" : ev.decision === "SANITIZE" ? "sanitize" : "allow") as never} label={ev.decision} className="px-2 py-0.5 text-[10px]" />
-                    </div>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">Risk {ev.riskScore}/100 · {ev.promptLength} chars</p>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">{formatRelativeTime(ev.timestamp)}</p>
-                  </li>
-                ))}
+                {recentEvents.map((ev) => {
+                  const promptDisplay = ev.prompt || ev.promptSnippet
+                  return (
+                    <li key={ev.id} className="group rounded-xl border border-border bg-surface-subtle p-3 transition-colors hover:border-border/80 hover:bg-surface">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-semibold text-foreground">{ev.threatCategory ?? "No threat"}</span>
+                          <span className="text-[11px] text-muted-foreground">· Risk {ev.riskScore}/100</span>
+                        </div>
+                        <StatusBadge tone={(ev.decision === "BLOCK" ? "block" : ev.decision === "WARN" ? "warn" : ev.decision === "SANITIZE" ? "sanitize" : "allow") as never} label={ev.decision} className="px-2 py-0.5 text-[10px]" />
+                      </div>
+
+                      {promptDisplay ? (
+                        <div className="mt-2 rounded-lg bg-surface/80 p-2 border border-border/60">
+                          <p className="font-mono text-[11px] leading-relaxed text-foreground/90 line-clamp-2 select-all">
+                            &ldquo;{promptDisplay}&rdquo;
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">{ev.promptLength} chars</p>
+                      )}
+
+                      <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                        <span>{formatRelativeTime(ev.timestamp)}</span>
+                        {promptDisplay && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPrompt(promptDisplay)
+                              setActiveChip("")
+                              window.scrollTo({ top: 0, behavior: "smooth" })
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-foreground hover:underline"
+                            title="Load prompt into analyzer"
+                          >
+                            Analyze again ↗
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
               )}
             </Panel>

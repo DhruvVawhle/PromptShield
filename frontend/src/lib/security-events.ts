@@ -33,6 +33,7 @@ export interface SecurityEvent {
   promptLength: number;
   model: string | null;
   prompt?: string;
+  promptSnippet?: string;
   sanitizedPrompt?: string | null;
   status?: IncidentStatus;
   resolutionNotes?: string | null;
@@ -51,6 +52,7 @@ export interface CreateSecurityEventInput {
   promptLength: number;
   model: string | null;
   prompt?: string;
+  promptSnippet?: string;
   sanitizedPrompt?: string | null;
 }
 
@@ -74,6 +76,22 @@ export async function createSecurityEvent(
   } as SecurityEventWithId;
 }
 
+function parseEventDoc(doc: any): SecurityEventWithId {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    ...data,
+    threatDetected: Boolean(data.threatDetected ?? (data.isMalicious || (data.categories && data.categories.length > 0))),
+    threatCategory: data.threatCategory ?? data.categories?.[0] ?? null,
+    riskScore: typeof data.riskScore === "number" ? data.riskScore : 0,
+    decision: data.decision ?? "ALLOW",
+    promptLength: data.promptLength ?? (typeof data.promptSnippet === "string" ? data.promptSnippet.length : (data.prompt?.length ?? 0)),
+    prompt: data.prompt ?? data.promptSnippet ?? null,
+    promptSnippet: data.promptSnippet ?? data.prompt ?? null,
+    timestamp: data.timestamp,
+  } as SecurityEventWithId;
+}
+
 export async function listSecurityEvents(
   uid: string,
   options: {
@@ -83,24 +101,30 @@ export async function listSecurityEvents(
   } = {}
 ): Promise<SecurityEventWithId[]> {
   const db = getFirebaseFirestore();
+  // Using single-field where query to avoid any composite index requirement in Firestore
   const constraints: QueryConstraint[] = [where("uid", "==", uid)];
-
-  if (options.startDate) {
-    constraints.push(where("timestamp", ">=", Timestamp.fromDate(options.startDate)));
-  }
-  if (options.endDate) {
-    constraints.push(where("timestamp", "<=", Timestamp.fromDate(options.endDate)));
-  }
-
-  constraints.push(orderBy("timestamp", "desc"));
-
-  if (options.limit) {
-    constraints.push(limit(options.limit));
-  }
 
   const q = query(collection(db, SECURITY_EVENTS_COLLECTION), ...constraints);
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SecurityEvent, "timestamp"> & { timestamp: Timestamp }) }) as SecurityEvent & { id: string });
+  let events = snap.docs.map(parseEventDoc);
+
+  // In-memory sort by timestamp descending ensures 100% reliable ordering without index errors
+  events.sort((a, b) => eventDate(b).getTime() - eventDate(a).getTime());
+
+  if (options.startDate || options.endDate) {
+    events = events.filter((ev) => {
+      const d = eventDate(ev);
+      if (options.startDate && d < options.startDate) return false;
+      if (options.endDate && d > options.endDate) return false;
+      return true;
+    });
+  }
+
+  if (options.limit) {
+    events = events.slice(0, options.limit);
+  }
+
+  return events;
 }
 
 export function subscribeSecurityEvents(
@@ -114,26 +138,31 @@ export function subscribeSecurityEvents(
   onError?: (error: Error) => void
 ): Unsubscribe {
   const db = getFirebaseFirestore();
+  // Single-field constraint guarantees real-time sync with zero composite index dependencies
   const constraints: QueryConstraint[] = [where("uid", "==", uid)];
-
-  if (options.startDate) {
-    constraints.push(where("timestamp", ">=", Timestamp.fromDate(options.startDate)));
-  }
-  if (options.endDate) {
-    constraints.push(where("timestamp", "<=", Timestamp.fromDate(options.endDate)));
-  }
-
-  constraints.push(orderBy("timestamp", "desc"));
-
-  if (options.limit) {
-    constraints.push(limit(options.limit));
-  }
 
   const q = query(collection(db, SECURITY_EVENTS_COLLECTION), ...constraints);
   return onSnapshot(
     q,
     (snap) => {
-      const events = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SecurityEvent, "timestamp"> & { timestamp: Timestamp }) }) as SecurityEvent & { id: string });
+      let events = snap.docs.map(parseEventDoc);
+
+      // In-memory sort by timestamp descending
+      events.sort((a, b) => eventDate(b).getTime() - eventDate(a).getTime());
+
+      if (options.startDate || options.endDate) {
+        events = events.filter((ev) => {
+          const d = eventDate(ev);
+          if (options.startDate && d < options.startDate) return false;
+          if (options.endDate && d > options.endDate) return false;
+          return true;
+        });
+      }
+
+      if (options.limit) {
+        events = events.slice(0, options.limit);
+      }
+
       callback(events);
     },
     (error) => {

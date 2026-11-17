@@ -114,29 +114,70 @@ export async function POST(request: Request) {
       throw new Error("GROQ_API_KEY is not configured.");
     }
 
-    // Ensure we only use finalPrompt going forward
-    const response = await fetch(getGroqChatUrl(baseUrl), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: finalPrompt }],
-        temperature: 0.2,
-        stream: true,
-      }),
-      cache: "no-store",
-    }).catch((err) => {
+    const sendGroqRequest = async (targetModel: string) => {
+      return await fetch(getGroqChatUrl(baseUrl), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          model: targetModel,
+          messages: [{ role: "user", content: finalPrompt }],
+          temperature: 0.2,
+          stream: true,
+        }),
+        cache: "no-store",
+      });
+    };
+
+    let response = await sendGroqRequest(model).catch((err) => {
       console.error("Groq fetch error:", err);
       throw err;
     });
 
+    // If rate-limited (429), attempt a brief retry after 1.5s
+    if (response.status === 429) {
+      console.warn(`Groq model ${model} rate-limited (429), retrying in 1.5s...`);
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      response = await sendGroqRequest(model).catch(() => response);
+
+      // If still 429, try secondary model with independent quota pool
+      if (response.status === 429 && model !== "openai/gpt-oss-20b") {
+        console.warn(`Groq model ${model} still rate-limited, failing over to openai/gpt-oss-20b...`);
+        response = await sendGroqRequest("openai/gpt-oss-20b").catch(() => response);
+      }
+    }
+
     if (!response.ok) {
       console.error(`Provider responded with status: ${response.status}`);
-      throw new Error("The AI provider is currently unavailable. Please try again later.");
+      let providerDetail = "";
+      try {
+        const errJson = await response.json();
+        providerDetail = errJson?.error?.message || errJson?.message || "";
+      } catch {
+        providerDetail = await response.text().catch(() => "");
+      }
+
+      if (response.status === 429) {
+        const error = new Error(providerDetail || "The Groq provider rate limit was reached. Please wait a few seconds and try again.");
+        (error as any).code = "RATE_LIMITED";
+        (error as any).status = 429;
+        throw error;
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        const error = new Error("The configured Groq credentials were rejected.");
+        (error as any).code = "AUTHENTICATION_FAILED";
+        (error as any).status = 401;
+        throw error;
+      }
+
+      const error = new Error(providerDetail || "The AI provider is currently unavailable. Please try again later.");
+      (error as any).code = "UPSTREAM_ERROR";
+      (error as any).status = 502;
+      throw error;
     }
 
     // Convert OpenRouter SSE to a simple text stream
@@ -206,10 +247,11 @@ export async function POST(request: Request) {
   } catch (error) {
     const safeMessage = getSafeGroqMessage(error);
     const code = (error as Error & { code?: string })?.code ?? "PROVIDER_ERROR";
+    const status = (error as Error & { status?: number })?.status ?? 502;
 
     return NextResponse.json(
       { error: { code, message: safeMessage } },
-      { status: 502 }
+      { status }
     );
   }
 }

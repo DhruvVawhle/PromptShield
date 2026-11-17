@@ -33,14 +33,25 @@ export function ChatClient() {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [draft, setDraft] = React.useState("");
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [activeAssistantId, setActiveAssistantId] = React.useState<string | null>(null);
   const messagesRef = React.useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
   const inputRef = React.useRef<HTMLTextAreaElement | null>(null);
 
-  React.useEffect(() => {
-    if (messagesRef.current) {
+  const scrollToBottom = React.useCallback((smooth = true) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: smooth ? "smooth" : "auto",
+        block: "end",
+      });
+    } else if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
     }
-  }, [messages, isProcessing]);
+  }, []);
+
+  React.useEffect(() => {
+    scrollToBottom(true);
+  }, [messages, isProcessing, scrollToBottom]);
 
   const handleSubmit = async (overrideText?: string) => {
     const textToSubmit = overrideText ?? draft;
@@ -95,6 +106,7 @@ export function ChatClient() {
           : undefined;
 
       const assistantMessageId = crypto.randomUUID();
+      setActiveAssistantId(assistantMessageId);
       
       setMessages(prev => [
         ...prev,
@@ -125,7 +137,9 @@ export function ChatClient() {
               : msg
           )
         );
+        scrollToBottom(false);
       }
+      scrollToBottom(true);
     } catch (err: any) {
       setMessages(prev => [
         ...prev,
@@ -136,8 +150,10 @@ export function ChatClient() {
           error: true,
         }
       ]);
+      scrollToBottom(true);
     } finally {
       setIsProcessing(false);
+      setActiveAssistantId(null);
       window.requestAnimationFrame(() => inputRef.current?.focus());
     }
   };
@@ -275,7 +291,7 @@ export function ChatClient() {
                 </div>
               ) : (
                 <div className="space-y-6 pb-4">
-                  {messages.map(msg => (
+                  {messages.filter(msg => msg.content.length > 0 || msg.error).map(msg => (
                     <div key={msg.id} className={cn("flex w-full animate-in fade-in slide-in-from-bottom-2", msg.role === "user" ? "justify-end" : "justify-start")}>
                       {msg.role === "assistant" && (
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm mr-3 mt-1">
@@ -304,7 +320,7 @@ export function ChatClient() {
                     </div>
                   ))}
                   
-                  {isProcessing && (
+                  {isProcessing && (!activeAssistantId || !messages.some(m => m.id === activeAssistantId && m.content.length > 0)) && (
                     <div className="flex w-full justify-start animate-in fade-in">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm mr-3 mt-1">
                         <Shield className="h-4 w-4" />
@@ -314,6 +330,7 @@ export function ChatClient() {
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} className="h-1 w-full shrink-0" />
                 </div>
               )}
             </div>
@@ -390,7 +407,7 @@ export function ChatClient() {
             </div>
             <div className="flex flex-col">
               <Link
-                href="/analyze"
+                href="/playground"
                 className="flex items-center justify-between w-full px-5 py-3 hover:bg-muted/50 transition-colors border-b border-border/60 group"
               >
                 <div className="flex items-center gap-3">

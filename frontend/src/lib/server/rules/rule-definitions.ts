@@ -242,6 +242,141 @@ export const DETECTION_RULES: DetectionRule[] = [
   },
 ];
 
+const STEM_OVERRIDE_INTENTS = new Set([
+  "ignor", "overrid", "bypass", "disregard", "forget", "disabl", "drop",
+  "neutral", "evad", "cancel", "omit", "deactivat", "abandon", "remov"
+]);
+
+const STEM_OVERRIDE_TARGETS = new Set([
+  "instruct", "rule", "direct", "prompt", "guidelin", "limit", "safeti",
+  "guardrail", "filter", "polici", "restri"
+]);
+
+const STEM_LEAK_INTENTS = new Set([
+  "reveal", "print", "show", "leak", "exfiltrat", "dump", "expos",
+  "display", "read", "disclos", "unhid"
+]);
+
+const STEM_LEAK_TARGETS = new Set([
+  "system", "secret", "prompt", "token", "key", "credenti", "password",
+  "api", "config", "hidden"
+]);
+
+const STEM_JAILBREAK_MODES = new Set([
+  "jailbreak", "dan", "unrestrict", "unfilter", "godmod", "unlimit", "rebel", "anarchi", "unbound"
+]);
+
+/**
+ * Morphological stem & token-sequence analyzer.
+ * Evaluates semantic word stems across token windows to catch tense, plural, and phrasing variations.
+ */
+export function evaluateStemmedTokens(
+  tokens: string[],
+  stems: string[]
+): {
+  matches: RuleMatch[];
+  flaggedTokens: Array<{ token: string; stem: string; category: AttackCategory; reason: string }>;
+} {
+  const matches: RuleMatch[] = [];
+  const flaggedTokens: Array<{ token: string; stem: string; category: AttackCategory; reason: string }> = [];
+  const seenRuleIds = new Set<string>();
+
+  for (let i = 0; i < stems.length; i++) {
+    const stem = stems[i];
+    const token = tokens[i];
+
+    // Check for direct override intent within a 5-token lookahead window
+    if (STEM_OVERRIDE_INTENTS.has(stem)) {
+      for (let j = i + 1; j < Math.min(stems.length, i + 6); j++) {
+        if (STEM_OVERRIDE_TARGETS.has(stems[j])) {
+          if (!seenRuleIds.has("STEM-OVERRIDE")) {
+            seenRuleIds.add("STEM-OVERRIDE");
+            matches.push({
+              ruleId: "STEM-OVERRIDE",
+              name: "Morphological Instruction Override",
+              category: "DIRECT_INJECTION",
+              severity: "HIGH",
+              matched: true,
+              evidence: `Stemmed sequence detected: "${token}" (${stem}) -> "${tokens[j]}" (${stems[j]})`,
+              weight: 45,
+            });
+          }
+          flaggedTokens.push({
+            token,
+            stem,
+            category: "DIRECT_INJECTION",
+            reason: `Adversarial override intent root: ${stem}`,
+          });
+          flaggedTokens.push({
+            token: tokens[j],
+            stem: stems[j],
+            category: "DIRECT_INJECTION",
+            reason: `Target constraint root: ${stems[j]}`,
+          });
+          break;
+        }
+      }
+    }
+
+    // Check for prompt/secret leakage intent within a 5-token lookahead window
+    if (STEM_LEAK_INTENTS.has(stem)) {
+      for (let j = i + 1; j < Math.min(stems.length, i + 6); j++) {
+        if (STEM_LEAK_TARGETS.has(stems[j])) {
+          if (!seenRuleIds.has("STEM-LEAK")) {
+            seenRuleIds.add("STEM-LEAK");
+            matches.push({
+              ruleId: "STEM-LEAK",
+              name: "Morphological System Prompt Extraction",
+              category: "PROMPT_LEAK",
+              severity: "CRITICAL",
+              matched: true,
+              evidence: `Exfiltration sequence detected: "${token}" (${stem}) -> "${tokens[j]}" (${stems[j]})`,
+              weight: 40,
+            });
+          }
+          flaggedTokens.push({
+            token,
+            stem,
+            category: "PROMPT_LEAK",
+            reason: `Extraction intent root: ${stem}`,
+          });
+          flaggedTokens.push({
+            token: tokens[j],
+            stem: stems[j],
+            category: "PROMPT_LEAK",
+            reason: `Sensitive target root: ${stems[j]}`,
+          });
+          break;
+        }
+      }
+    }
+
+    // Check for jailbreak mode roots
+    if (STEM_JAILBREAK_MODES.has(stem)) {
+      if (!seenRuleIds.has("STEM-JAILBREAK")) {
+        seenRuleIds.add("STEM-JAILBREAK");
+        matches.push({
+          ruleId: "STEM-JAILBREAK",
+          name: "Morphological Jailbreak Pattern",
+          category: "JAILBREAK",
+          severity: "CRITICAL",
+          matched: true,
+          evidence: `Jailbreak root identified: "${token}" (${stem})`,
+          weight: 45,
+        });
+      }
+      flaggedTokens.push({
+        token,
+        stem,
+        category: "JAILBREAK",
+        reason: `Jailbreak mode root: ${stem}`,
+      });
+    }
+  }
+
+  return { matches, flaggedTokens };
+}
+
 export function evaluateDetectionRules(normalizedText: string): RuleMatch[] {
   const matches: RuleMatch[] = [];
 
