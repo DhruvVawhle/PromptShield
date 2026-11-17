@@ -10,20 +10,21 @@ PromptShield is an enterprise-grade AI security gateway and management platform 
 
 | Stage | Capability | Description |
 |:---|:---|:---|
-| **Analyze** | Server-Side Security Engine | Zero-dependency heuristic rule engine with Unicode and obfuscation normalization, adversarial pattern matching, sensitive data redaction, and deterministic policy resolution. |
-| **Detect** | Threat Intelligence | Multi-category detection covering direct prompt injection, jailbreaks, system prompt extraction, persona hijacking, credential probing, and evasion. |
+| **Analyze** | Server-Side Security Engine | Zero-dependency heuristic rule engine with morphological stemmer, tokenization, Unicode and obfuscation normalization, adversarial pattern matching, sensitive data redaction, and deterministic policy resolution. |
+| **Detect** | Threat Intelligence | Multi-category detection covering direct prompt injection, jailbreaks, system prompt extraction, persona hijacking, credential probing, and evasion with suffix-stripped stem matching. |
+| **Track** | Full Prompt Auditing & Tracking | Real-time preservation of user prompts across Cloud Firestore, Dashboard Recent Events, and Incident Triage with one-click re-analysis, while stripping credentials via `redactSensitiveContent`. |
 | **Enforce** | Guardrail Policies | Strictest-action-wins deterministic precedence engine with customizable risk thresholds and action overrides (`BLOCK`, `SANITIZE`, `WARN`, `ALLOW`). |
 | **Audit** | Immutable Audit Trail | Automatic, tamper-resistant audit logging for policy mutations, security decisions, unauthorized access attempts, and incident triaging. |
 | **Triage** | Incident Resolution | End-to-end incident management with status lifecycle tracking (`OPEN`, `INVESTIGATING`, `RESOLVED`, `FALSE_POSITIVE`) and sanitized resolution notes. |
 | **Diagnose** | Platform Telemetry | Continuous bounded liveness and readiness probes across Firestore, Upstash Redis, Groq AI Engine, and the compiled rule engine. |
-| **Experience** | Awwwards & Impeccable UX | Smooth Lenis inertia scrolling synchronized with GSAP tickers, Cuberto magnetic follower cursor, top-edge kinetic scroll tracker, and Hallmark-verified anti-slop design. |
+| **Experience** | Awwwards & Impeccable UX | Smooth Lenis inertia scrolling synchronized with GSAP tickers, Cuberto magnetic spring follower cursor (dark/light adaptive), real-time streaming AI chat auto-scroll, top-edge kinetic scroll tracker, and Hallmark-verified design. |
 
 ### Threat Coverage
 
-- 🔴 **Direct Prompt Injection** — Instruction overrides (`ignore previous instructions...`, `disregard above guidelines...`).
+- 🔴 **Direct Prompt Injection** — Instruction overrides (`ignore previous instructions...`, `disregard above guidelines...`) backed by morphological root stemming (`ignor`, `overrid`, `direct`, `guidelin`).
 - 🔴 **Jailbreak Personas** — Persona hijacking and ethical bypasses (`DAN`, `developer mode`, `evil twin`, hypothetical bypass scenarios).
 - 🔴 **System Prompt Exfiltration** — Hidden instruction harvesting (`repeat everything above`, `show raw prompt verbatim`).
-- 🔴 **Obfuscation & Evasion** — Zero-width character stripping, URL decoding normalization, Base64/Hex encoding detection.
+- 🔴 **Morphological & Obfuscation Evasion** — English suffix-stripping (`ing`, `ed`, `ation`, `ment`), zero-width character stripping, URL decoding normalization, Base64/Hex encoding detection.
 - 🔴 **Data Privacy & PII** — Automatic redaction of API keys, private keys, JWTs, passwords, credit card numbers, SSNs, and emails.
 - 🔴 **Credential Probing** — Hunting for secrets, configuration tokens, or unauthorized database access.
 
@@ -243,7 +244,7 @@ npm test
 # Run TypeScript compiler check
 npx --prefix frontend tsc --project frontend/tsconfig.json --noEmit
 
-# Run Next.js Production Build (Compiles all 34 routes)
+# Run Next.js Production Build (Compiles all 35 routes)
 npm run build
 ```
 

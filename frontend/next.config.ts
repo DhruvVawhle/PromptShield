@@ -5,6 +5,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  async redirects() {
+    return [
+      {
+        source: "/analyze",
+        destination: "/playground",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

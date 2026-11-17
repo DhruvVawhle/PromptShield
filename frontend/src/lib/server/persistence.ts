@@ -42,34 +42,33 @@ export async function persistSecurityEvent(uid: string, result: AnalysisResult, 
   try {
     const eventRef = adminDb.collection("security_events").doc(result.requestId);
     
-    // Privacy & data minimization:
-    // 1. If category indicates sensitive data or prompt leak -> fully redact
-    // 2. If decision is BLOCK or considered malicious -> do not store adversarial payload
-    // 3. Otherwise -> scrub any detected secrets/PII independently and minimize length to 200 chars
-    let storedPrompt: string;
-    const isSensitiveCategory = result.categories.includes("SENSITIVE_DATA") || result.categories.includes("PROMPT_LEAK");
-
-    if (isSensitiveCategory) {
-      storedPrompt = "[REDACTED DUE TO SENSITIVE CONTENT]";
-    } else if (result.decision === "BLOCK" || result.isMalicious) {
-      storedPrompt = "[REDACTED ADVERSARIAL CONTENT]";
-    } else {
-      const { text: scrubbed } = redactSensitiveContent(rawPrompt);
-      storedPrompt = scrubbed.length > 200 ? scrubbed.substring(0, 200) + "..." : scrubbed;
-    }
+    // Scrub credentials, tokens, and PII from the prompt, while preserving the adversarial or query text
+    // so administrators and users can audit and keep track of their prompts accurately.
+    const { text: scrubbed } = redactSensitiveContent(rawPrompt);
+    const storedSnippet = scrubbed.length > 500 ? scrubbed.substring(0, 500) + "..." : scrubbed;
 
     await eventRef.set({
       uid,
+      promptId: result.requestId,
       timestamp: new Date().toISOString(),
       decision: result.decision,
       isMalicious: result.isMalicious,
+      threatDetected: result.isMalicious || (result.categories && result.categories.length > 0),
+      threatCategory: result.categories?.[0] || null,
       riskScore: result.riskScore,
       riskLevel: result.riskLevel,
       categories: result.categories,
       triggeredRuleIds: result.triggeredRuleIds,
       latencyMs: result.latencyMs,
       policyId: result.policyApplied.id,
-      promptSnippet: storedPrompt,
+      policy: result.policyApplied.name,
+      promptLength: rawPrompt.length,
+      prompt: scrubbed,
+      promptSnippet: storedSnippet,
+      sanitizedPrompt: result.sanitizedPrompt ?? null,
+      status: "OPEN",
+      confidence: result.confidence ?? null,
+      model: "promptshield-v1",
     });
 
     await logAudit(uid, "SECURITY_DECISION", { 

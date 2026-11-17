@@ -3,6 +3,7 @@ import { normalizePromptInput } from "./normalizer";
 import { evaluatePolicy } from "./policy-evaluator";
 import {
   evaluateDetectionRules,
+  evaluateStemmedTokens,
   isEducationalSecurityQuery,
   SAFE_INDICATORS,
 } from "./rules/rule-definitions";
@@ -90,8 +91,22 @@ export async function analyzePromptServer(
     // 3. Educational Query Protection (TC-006)
     const isEducational = isEducationalSecurityQuery(text);
 
-    // 4. Rule Evaluation
+    // 4. Rule Evaluation (Static rules + Morphological Stem & Token sequence rules)
     const matchedRules: RuleMatch[] = evaluateDetectionRules(text);
+
+    // Evaluate token stems if educational exception does not apply
+    const tokenData = normalizedInput.tokenAnalysis;
+    let flaggedTokens: Array<{ token: string; stem: string; category: AttackCategory; reason: string }> = [];
+
+    if (tokenData && tokenData.tokens && tokenData.stemmedTokens && !isEducational) {
+      const stemEval = evaluateStemmedTokens(tokenData.tokens, tokenData.stemmedTokens);
+      for (const m of stemEval.matches) {
+        if (!matchedRules.some((r) => r.ruleId === m.ruleId)) {
+          matchedRules.push(m);
+        }
+      }
+      flaggedTokens = stemEval.flaggedTokens;
+    }
 
     // Add obfuscation signals if detected during normalization
     if (normalizedInput.containsZeroWidthChars) {
@@ -216,6 +231,12 @@ export async function analyzePromptServer(
       policyApplied: policyResult.policyApplied,
       confidence,
       disclaimer: SECURITY_DISCLAIMER,
+      tokenAnalysis: tokenData
+        ? {
+            ...tokenData,
+            flaggedTokens,
+          }
+        : undefined,
     };
   } catch (err: unknown) {
     // FAIL-CLOSED ARCHITECTURE: Never fail open on unexpected engine exceptions

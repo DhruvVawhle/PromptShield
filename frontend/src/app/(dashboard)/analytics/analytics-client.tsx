@@ -143,7 +143,7 @@ export function AnalyticsClient() {
           Analyze your first prompt to start tracking security activity and decisions across your AI workflows.
         </p>
         <Link 
-          href="/analyze" 
+          href="/playground" 
           className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-10 px-6 font-medium hover:bg-primary/90 transition-colors"
         >
           Analyze a prompt

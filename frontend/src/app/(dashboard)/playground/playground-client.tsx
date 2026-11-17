@@ -63,10 +63,28 @@ export function PlaygroundClient() {
         "BLOCK": "block"
       };
 
+      const wordCount = result.tokenAnalysis?.wordCount ?? promptText.trim().split(/\s+/).length;
+      const flaggedStems = result.tokenAnalysis?.flaggedTokens?.map((f: any) => `"${f.token}" [${f.stem}]`).join(", ");
+
       const mappedResult = {
         steps: [
-          { id: "1", label: "Prompt Received", status: "complete", result: `${promptText.length} characters` },
-          { id: "2", label: "Threat Detection", status: "complete", result: result.categories.length > 0 ? `Detected: ${result.categories.join(", ")}` : "No threats detected", tone: result.riskLevel === "LOW" ? "allow" : "warn" },
+          {
+            id: "1",
+            label: "Tokenization & Lexical Analysis",
+            status: "complete",
+            result: `${promptText.length} chars · ${wordCount} words tokenized & stemmed`,
+            tone: "allow" as const,
+          },
+          {
+            id: "2",
+            label: "Stemming & Threat Detection",
+            status: "complete",
+            result:
+              result.categories.length > 0
+                ? `Detected: ${result.categories.join(", ")}${flaggedStems ? ` · Roots: ${flaggedStems}` : ""}`
+                : `All ${wordCount} words & stems verified safe`,
+            tone: result.riskLevel === "LOW" ? ("allow" as const) : ("warn" as const),
+          },
           { id: "3", label: "Policy Evaluation", status: "complete", result: `Policy: ${result.policyApplied.name} - ${result.reasoning}` },
           { id: "4", label: "Security Decision", status: "complete", result: result.decision === "SANITIZE" ? `SANITIZE\nSanitized Output: ${result.sanitizedPrompt}` : result.decision, tone: toneMap[result.decision] }
         ]
@@ -138,7 +156,13 @@ export function PlaygroundClient() {
                 <Textarea
                   value={promptText}
                   onChange={(e) => setPromptText(e.target.value)}
-                  placeholder="Type or paste a prompt to analyze..."
+                  onKeyDown={(e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && promptText.trim() && !isAnalyzing) {
+                      e.preventDefault();
+                      handleAnalyze();
+                    }
+                  }}
+                  placeholder="Type or paste a prompt to analyze... (Press Ctrl+Enter to analyze)"
                   className="min-h-[200px] h-full resize-none p-4 text-sm leading-relaxed"
                   disabled={isAnalyzing}
                 />
@@ -157,7 +181,10 @@ export function PlaygroundClient() {
                     Analyzing...
                   </>
                 ) : (
-                  "Analyze prompt"
+                  <>
+                    Analyze prompt
+                    <span className="ml-2 text-[10px] opacity-70 hidden sm:inline border border-primary-foreground/30 rounded px-1.5 py-0.5">⌘↵</span>
+                  </>
                 )}
               </Button>
             </CardContent>

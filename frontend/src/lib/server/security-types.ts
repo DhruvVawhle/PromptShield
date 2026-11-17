@@ -48,6 +48,14 @@ export interface GuardrailPolicy {
   customCategoryActions?: Partial<Record<AttackCategory, SecurityDecision>>;
 }
 
+export interface TokenAnalysis {
+  wordCount: number;
+  tokenCount: number;
+  tokens: string[];
+  stemmedTokens: string[];
+  flaggedTokens: { token: string; stem: string; category: AttackCategory; reason: string }[];
+}
+
 export interface NormalizedInput {
   raw: string;
   normalized: string;
@@ -55,6 +63,7 @@ export interface NormalizedInput {
   containsZeroWidthChars: boolean;
   isObfuscatedEncoding: boolean;
   detectedEncodings: string[];
+  tokenAnalysis?: TokenAnalysis;
 }
 
 export interface AnalysisResult {
@@ -75,6 +84,7 @@ export interface AnalysisResult {
   };
   confidence: number;
   disclaimer: string;
+  tokenAnalysis?: TokenAnalysis;
 }
 
 export const DEFAULT_GUARDRAIL_POLICY: GuardrailPolicy = {

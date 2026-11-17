@@ -99,11 +99,11 @@ export function CubertoCursor() {
           destY = destY + (centerY - destY) * 0.35;
         }
 
-        // Fluid spring lerp
-        dotX += (destX - dotX) * 0.55;
-        dotY += (destY - dotY) * 0.55;
-        ringX += (destX - ringX) * 0.15;
-        ringY += (destY - ringY) * 0.15;
+        // Snappy, responsive tracking without sluggish lag
+        dotX += (destX - dotX) * 0.85;
+        dotY += (destY - dotY) * 0.85;
+        ringX += (destX - ringX) * 0.35;
+        ringY += (destY - ringY) * 0.35;
 
         dot.style.transform = `translate3d(${dotX}px, ${dotY}px, 0) translate(-50%, -50%) scale(${
           isInput ? 0 : isClicking ? 0.7 : isHovering ? 0.3 : 1
@@ -112,18 +112,32 @@ export function CubertoCursor() {
         const ringScale = isInput
           ? 0
           : isClicking
-          ? 1.5
+          ? 1.4
           : isHovering
-          ? 1.9
+          ? 1.7
           : 1;
 
         cursor.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) translate(-50%, -50%) scale(${ringScale})`;
-        cursor.style.borderColor = isHovering
-          ? "rgba(255, 255, 255, 0.85)"
-          : "rgba(255, 255, 255, 0.4)";
-        cursor.style.backgroundColor = isHovering
-          ? "rgba(255, 255, 255, 0.12)"
-          : "transparent";
+
+        // Adaptive colors for pristine clarity in both Light and Dark mode
+        const isDark = document.documentElement.classList.contains("dark");
+        if (isDark) {
+          dot.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
+          cursor.style.borderColor = isHovering
+            ? "rgba(255, 255, 255, 0.9)"
+            : "rgba(255, 255, 255, 0.4)";
+          cursor.style.backgroundColor = isHovering
+            ? "rgba(255, 255, 255, 0.12)"
+            : "transparent";
+        } else {
+          dot.style.backgroundColor = "rgba(15, 23, 42, 0.9)";
+          cursor.style.borderColor = isHovering
+            ? "rgba(15, 23, 42, 0.85)"
+            : "rgba(15, 23, 42, 0.35)";
+          cursor.style.backgroundColor = isHovering
+            ? "rgba(15, 23, 42, 0.08)"
+            : "transparent";
+        }
       }
 
       animationFrameId = requestAnimationFrame(tick);
@@ -148,15 +162,15 @@ export function CubertoCursor() {
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-[9999] overflow-hidden select-none"
     >
-      {/* Outer fluid lag ring */}
+      {/* Outer fluid responsive ring */}
       <div
         ref={cursorRef}
-        className="pointer-events-none absolute left-0 top-0 h-9 w-9 rounded-full border border-white/40 opacity-0 transition-opacity duration-300 ease-out will-change-transform mix-blend-difference backdrop-blur-[0.5px]"
+        className="pointer-events-none absolute left-0 top-0 h-9 w-9 rounded-full border border-slate-900/40 dark:border-white/40 opacity-0 transition-opacity duration-200 ease-out will-change-transform"
       />
       {/* Precision center dot */}
       <div
         ref={dotRef}
-        className="pointer-events-none absolute left-0 top-0 h-1.5 w-1.5 rounded-full bg-white opacity-0 transition-opacity duration-300 ease-out will-change-transform mix-blend-difference"
+        className="pointer-events-none absolute left-0 top-0 h-1.5 w-1.5 rounded-full bg-slate-900 dark:bg-white opacity-0 transition-opacity duration-200 ease-out will-change-transform"
       />
     </div>
   );

@@ -23,13 +23,13 @@ import { cn } from "@/lib/utils"
 
 const appNavItems = [
   { label: "Dashboard", href: "/dashboard" },
+  { label: "AI Chat", href: "/chat" },
   { label: "Analyze", href: "/playground" },
   { label: "Threats", href: "/incidents" },
   { label: "Policies", href: "/policies" },
   { label: "Audit Logs", href: "/audit-logs" },
-  { label: "System", href: "/system" },
   { label: "Analytics", href: "/analytics" },
-  { label: "AI Chat", href: "/chat" },
+  { label: "System", href: "/system" },
   { label: "Team & Access", href: "/users" },
   { label: "Settings", href: "/settings" },
 ]

@@ -8,13 +8,13 @@ import { cn } from "@/lib/utils"
 
 const nav = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "AI Chat", href: "/chat", icon: MessageSquare },
   { name: "Analyze", href: "/playground", icon: Search },
   { name: "Threats", href: "/incidents", icon: AlertTriangle },
   { name: "Policies", href: "/policies", icon: Shield },
   { name: "Audit Logs", href: "/audit-logs", icon: History },
-  { name: "System", href: "/system", icon: Activity },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "AI Chat", href: "/chat", icon: MessageSquare },
+  { name: "System", href: "/system", icon: Activity },
   { name: "Team & Access", href: "/users", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ]
