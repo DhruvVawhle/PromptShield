@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOmniRouteChatUrl, getOmniRouteConfig, getSafeProviderMessage } from "@/lib/omniroute";
+import { getGroqChatUrl, getGroqConfig, getSafeGroqMessage } from "@/lib/groq";
 import { adminAuth } from "@/lib/firebase-admin";
 import { checkRateLimit } from "@/lib/server/rate-limiter";
 
@@ -108,21 +108,19 @@ export async function POST(request: Request) {
       finalPrompt = analysisResult.sanitizedPrompt;
     }
 
-    const { apiKey, model, baseUrl } = getOmniRouteConfig();
+    const { apiKey, model, baseUrl } = getGroqConfig();
 
     if (!apiKey) {
-      throw new Error("OMNIROUTE_API_KEY is not configured.");
+      throw new Error("GROQ_API_KEY is not configured.");
     }
 
     // Ensure we only use finalPrompt going forward
-    const response = await fetch(getOmniRouteChatUrl(baseUrl), {
+    const response = await fetch(getGroqChatUrl(baseUrl), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
         Accept: "application/json",
-        "HTTP-Referer": "https://github.com/promptshield/promptshield",
-        "X-Title": "PromptShield",
       },
       body: JSON.stringify({
         model,
@@ -132,7 +130,7 @@ export async function POST(request: Request) {
       }),
       cache: "no-store",
     }).catch((err) => {
-      console.error("OmniRoute fetch error:", err);
+      console.error("Groq fetch error:", err);
       throw err;
     });
 
@@ -206,7 +204,7 @@ export async function POST(request: Request) {
       headers: responseHeaders,
     });
   } catch (error) {
-    const safeMessage = getSafeProviderMessage(error);
+    const safeMessage = getSafeGroqMessage(error);
     const code = (error as Error & { code?: string })?.code ?? "PROVIDER_ERROR";
 
     return NextResponse.json(

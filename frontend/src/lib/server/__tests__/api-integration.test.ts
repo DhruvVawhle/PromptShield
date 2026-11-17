@@ -5,6 +5,7 @@ import assert from "node:assert";
 process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "test-project";
 process.env.FIREBASE_CLIENT_EMAIL = "test@test.com";
 process.env.FIREBASE_PRIVATE_KEY = "test-key";
+process.env.GROQ_API_KEY = "test-key";
 process.env.OMNIROUTE_API_KEY = "test-key";
 
 import { POST as aiGatewayPOST } from "@/app/api/ai/route";

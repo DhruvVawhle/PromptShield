@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getOmniRouteConfig } from "@/lib/omniroute";
+import { getGroqConfig } from "@/lib/groq";
 
 import { SettingsClient } from "./settings-client";
 
@@ -10,13 +10,13 @@ export const metadata: Metadata = {
 };
 
 export default function SettingsPage() {
-  const omniConfig = getOmniRouteConfig();
+  const groqConfig = getGroqConfig();
   
   return (
     <SettingsClient 
-      omniRouteUrl={omniConfig.baseUrl}
-      omniRouteModel={omniConfig.model}
-      omniRouteConfigured={!!omniConfig.apiKey}
+      omniRouteUrl={groqConfig.baseUrl}
+      omniRouteModel={groqConfig.model}
+      omniRouteConfigured={!!groqConfig.apiKey}
     />
   );
 }

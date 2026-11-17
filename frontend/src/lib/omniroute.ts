@@ -1,238 +1,59 @@
-export type OmniRouteHealthStatus =
-  | "available"
-  | "unavailable"
-  | "authentication_failure"
-  | "rate_limited"
-  | "model_unavailable"
-  | "unconfigured";
+/**
+ * Legacy OmniRoute compatibility module.
+ * Delegates directly to the Groq AI engine (frontend/src/lib/groq.ts).
+ */
+import {
+  callGroq,
+  checkGroqHealth,
+  getGroqChatUrl,
+  getGroqConfig,
+  getGroqModelListUrl,
+  getSafeGroqMessage,
+  DEFAULT_GROQ_BASE_URL,
+  DEFAULT_GROQ_MODEL,
+  type GroqHealthStatus,
+} from "./groq";
 
-export const DEFAULT_OMNIROUTE_BASE_URL = "http://localhost:20128/v1";
+export type OmniRouteHealthStatus = GroqHealthStatus;
+
+export const DEFAULT_OMNIROUTE_BASE_URL = DEFAULT_GROQ_BASE_URL;
+export const DEFAULT_OMNIROUTE_MODEL = DEFAULT_GROQ_MODEL;
 
 export function getOmniRouteConfig() {
-  const baseUrl = (process.env.OMNIROUTE_BASE_URL ?? DEFAULT_OMNIROUTE_BASE_URL).replace(/\/+$/, "");
-  const apiKey = process.env.OMNIROUTE_API_KEY?.trim() ?? "";
-  const model = process.env.OMNIROUTE_MODEL?.trim() || "auto";
-
-  return { baseUrl, apiKey, model };
+  return getGroqConfig();
 }
 
-export function getOmniRouteModelListUrl(baseUrl = getOmniRouteConfig().baseUrl) {
-  return `${baseUrl}/models`;
+export function getOmniRouteModelListUrl(baseUrl?: string) {
+  return getGroqModelListUrl(baseUrl);
 }
 
-export function getOmniRouteChatUrl(baseUrl = getOmniRouteConfig().baseUrl) {
-  return `${baseUrl}/chat/completions`;
+export function getOmniRouteChatUrl(baseUrl?: string) {
+  return getGroqChatUrl(baseUrl);
 }
 
 export function getSafeProviderMessage(error: unknown) {
-  if (error instanceof Error) {
-    const message = error.message || "The configured AI gateway is unavailable.";
-
-    if (message.includes("OMNIROUTE_API_KEY") || message.includes("not configured")) {
-      return "The OmniRoute API key is not configured on the server.";
-    }
-
-    if (message.includes("401") || message.includes("403") || message.includes("authentication")) {
-      return "The OmniRoute provider rejected the configured credentials.";
-    }
-
-    if (message.includes("429") || message.includes("rate limit") || message.includes("rate-limited")) {
-      return "The OmniRoute provider rate limit was reached.";
-    }
-
-    if (message.includes("model") || message.includes("not available")) {
-      return "The selected OmniRoute model is unavailable.";
-    }
-
-    if (message.includes("fetch failed") || message.includes("ECONNREFUSED") || message.includes("timed out")) {
-      return "The OmniRoute gateway is currently unavailable.";
-    }
-
-    return "The configured AI gateway could not process the request.";
-  }
-
-  return "The configured AI gateway could not process the request.";
+  return getSafeGroqMessage(error);
 }
 
 export async function callOmniRoute(prompt: string) {
-  const { apiKey, model, baseUrl } = getOmniRouteConfig();
-
-  if (!apiKey) {
-    const error = new Error("OMNIROUTE_API_KEY is not configured.");
-    (error as Error & { code?: string }).code = "MISSING_API_KEY";
-    throw error;
-  }
-
-  const response = await fetch(getOmniRouteChatUrl(baseUrl), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      Accept: "application/json",
-      "HTTP-Referer": "https://github.com/promptshield/promptshield", // Required by OpenRouter
-      "X-Title": "PromptShield", // Recommended by OpenRouter
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.2,
-      stream: false,
-    }),
-    cache: "no-store",
-  }).catch((err) => {
-    console.error("OmniRoute fetch error:", err);
-    throw err;
-  });
-
-  if (response.status === 401 || response.status === 403) {
-    const error = new Error("The configured OmniRoute credentials were rejected.");
-    (error as Error & { code?: string }).code = "AUTHENTICATION_FAILED";
-    throw error;
-  }
-
-  if (response.status === 429) {
-    const error = new Error("The configured OmniRoute provider rate limit was reached.");
-    (error as Error & { code?: string }).code = "RATE_LIMITED";
-    throw error;
-  }
-
-  if (!response.ok) {
-    let detail = "The configured OmniRoute provider is unavailable.";
-
-    try {
-      const payload = (await response.json()) as { error?: { message?: string }; message?: string };
-      const providerMessage = payload?.error?.message ?? payload?.message;
-      if (providerMessage) {
-        detail = providerMessage;
-      }
-    } catch {
-      // Ignore malformed provider error payloads and fall back to a safe error.
-    }
-
-    const error = new Error(detail);
-    (error as Error & { code?: string }).code = "PROVIDER_UNAVAILABLE";
-    throw error;
-  }
-
-  const payload = (await response.json()) as {
-    model?: string;
-    choices?: Array<{ message?: { content?: string | null }; text?: string | null }>;
-  };
-
-  const content = payload.choices?.[0]?.message?.content ?? payload.choices?.[0]?.text ?? "";
-
-  if (!content) {
-    const error = new Error("The configured OmniRoute provider returned an empty response.");
-    (error as Error & { code?: string }).code = "INVALID_RESPONSE";
-    throw error;
-  }
-
+  const result = await callGroq(prompt);
   return {
-    content,
-    model: payload.model ?? model,
-    provider: "OmniRoute",
+    ...result,
+    provider: "Groq" as const,
   };
 }
 
 export async function checkOmniRouteHealth(): Promise<{
   ok: boolean;
   status: OmniRouteHealthStatus;
-  provider: "OmniRoute";
+  provider: "OmniRoute" | "Groq";
   model: string;
   message: string;
   availableModels: string[];
 }> {
-  const { apiKey, model, baseUrl } = getOmniRouteConfig();
-
-  if (!apiKey) {
-    return {
-      ok: false,
-      status: "unconfigured",
-      provider: "OmniRoute",
-      model,
-      message: "OMNIROUTE_API_KEY is not configured on the server.",
-      availableModels: [],
-    };
-  }
-
-  try {
-    const response = await fetch(getOmniRouteModelListUrl(baseUrl), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      return {
-        ok: false,
-        status: "authentication_failure",
-        provider: "OmniRoute",
-        model,
-        message: "The configured OmniRoute credentials were rejected.",
-        availableModels: [],
-      };
-    }
-
-    if (response.status === 429) {
-      return {
-        ok: false,
-        status: "rate_limited",
-        provider: "OmniRoute",
-        model,
-        message: "The OmniRoute provider rate limit was reached.",
-        availableModels: [],
-      };
-    }
-
-    if (!response.ok) {
-      return {
-        ok: false,
-        status: "unavailable",
-        provider: "OmniRoute",
-        model,
-        message: "The OmniRoute provider is unavailable.",
-        availableModels: [],
-      };
-    }
-
-    const payload = (await response.json()) as {
-      data?: Array<{ id?: string; name?: string }>;
-    };
-
-    const availableModels = (payload.data ?? [])
-      .map((entry) => entry.id ?? entry.name ?? "unknown")
-      .filter(Boolean);
-
-    if (availableModels.length === 0) {
-      return {
-        ok: false,
-        status: "model_unavailable",
-        provider: "OmniRoute",
-        model,
-        message: "The configured OmniRoute model is unavailable.",
-        availableModels: [],
-      };
-    }
-
-    return {
-      ok: true,
-      status: "available",
-      provider: "OmniRoute",
-      model,
-      message: "OmniRoute is available.",
-      availableModels,
-    };
-  } catch {
-    return {
-      ok: false,
-      status: "unavailable",
-      provider: "OmniRoute",
-      model,
-      message: "OmniRoute is not reachable from the server.",
-      availableModels: [],
-    };
-  }
+  const health = await checkGroqHealth();
+  return {
+    ...health,
+    provider: "Groq",
+  };
 }

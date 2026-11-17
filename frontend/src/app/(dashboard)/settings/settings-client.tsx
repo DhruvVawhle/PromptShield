@@ -209,10 +209,10 @@ export function SettingsClient({
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-sm text-foreground">OmniRoute Gateway</h3>
+                      <h3 className="font-semibold text-sm text-foreground">Groq AI Engine</h3>
                       {omniRouteConfigured ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-status-allow/10 px-2 py-0.5 text-xs font-medium text-status-allow">
-                          <CheckCircle2 className="h-3 w-3" /> Configured
+                          <CheckCircle2 className="h-3 w-3" /> Connected & Active
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-status-block/10 px-2 py-0.5 text-xs font-medium text-status-block">

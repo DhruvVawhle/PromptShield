@@ -270,6 +270,7 @@ test("System Status API - Does not leak secrets, API keys, or raw stack traces",
   const res = await GET(req);
   const rawBody = await res.text();
 
+  assert.ok(!rawBody.includes("GROQ_API_KEY"));
   assert.ok(!rawBody.includes("OMNIROUTE_API_KEY"));
   assert.ok(!rawBody.includes("UPSTASH_REDIS_REST_TOKEN"));
   assert.ok(!rawBody.includes("FIREBASE_PRIVATE_KEY"));
