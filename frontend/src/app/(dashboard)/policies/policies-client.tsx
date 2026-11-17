@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, ShieldAlert, Shield, FileText, CheckCircle2, PauseCircle, Clock, ChevronRight, MoreHorizontal, FileEdit, Trash2, Power, PowerOff, Plus } from "lucide-react";
+import { Search, ShieldAlert, Shield, FileText, CheckCircle2, PauseCircle, Clock, ChevronRight, MoreHorizontal, FileEdit, Trash2, Power, PowerOff, Plus, X, AlertCircle } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Panel } from "@/components/ui/panel";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -50,6 +50,16 @@ export function PoliciesClient() {
   const [formAction, setFormAction] = React.useState<PolicyAction>("BLOCK");
   const [formStatus, setFormStatus] = React.useState<PolicyStatus>("Active");
   const [formConditions, setFormConditions] = React.useState("");
+
+  // In-app notification & confirmation state
+  const [notification, setNotification] = React.useState<{ message: string; type: "error" | "success" } | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<PolicyWithId | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const showNotification = (message: string, type: "error" | "success" = "success") => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3500);
+  };
 
   React.useEffect(() => {
     if (authLoading) return;
@@ -123,31 +133,50 @@ export function PoliciesClient() {
 
       if (editingPolicy) {
         await updatePolicy(editingPolicy.id, input);
+        showNotification(`Policy "${formName}" updated successfully.`);
       } else {
         await createPolicy(user.uid, input);
+        showNotification(`Policy "${formName}" created successfully.`);
       }
       setIsModalOpen(false);
     } catch (err: any) {
-      alert("Error saving policy: " + err.message);
+      showNotification(err.message || "Failed to save policy", "error");
     }
   };
 
   const handleToggleStatus = async (policy: PolicyWithId) => {
     if (policy.isSystem) {
-      alert("Cannot disable system policies directly.");
+      showNotification("Cannot disable system policies directly.", "error");
       return;
     }
     const newStatus = policy.status === "Active" ? "Disabled" : "Active";
-    await updatePolicy(policy.id, { status: newStatus });
+    try {
+      await updatePolicy(policy.id, { status: newStatus });
+      showNotification(`Policy "${policy.name}" set to ${newStatus}.`);
+    } catch (err: any) {
+      showNotification(err.message || "Failed to toggle status", "error");
+    }
   };
 
-  const handleDelete = async (policy: PolicyWithId) => {
+  const handleDelete = (policy: PolicyWithId) => {
     if (policy.isSystem) {
-      alert("Cannot delete system policies.");
+      showNotification("Cannot delete system policies.", "error");
       return;
     }
-    if (confirm(`Are you sure you want to delete policy "${policy.name}"?`)) {
-      await deletePolicy(policy.id);
+    setDeleteTarget(policy);
+  };
+
+  const confirmDeleteAction = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await deletePolicy(deleteTarget.id);
+      showNotification(`Policy "${deleteTarget.name}" deleted successfully.`);
+      setDeleteTarget(null);
+    } catch (err: any) {
+      showNotification(err.message || "Failed to delete policy", "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -191,7 +220,24 @@ export function PoliciesClient() {
   const isGuardrailsActive = activeCount > 0;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl pb-10">
+    <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl pb-10 relative">
+      {/* Toast Notification */}
+      {notification ? (
+        <div
+          className={cn(
+            "fixed top-20 right-6 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 text-xs font-semibold shadow-2xl animate-in fade-in slide-in-from-top-3 backdrop-blur-md",
+            notification.type === "error"
+              ? "border-destructive/40 bg-destructive/15 text-destructive"
+              : "border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+          )}
+        >
+          {notification.type === "error" ? <AlertCircle className="h-4 w-4 shrink-0" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
+          <span>{notification.message}</span>
+          <button type="button" onClick={() => setNotification(null)} className="ml-2 rounded p-0.5 hover:opacity-70">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : null}
       {/* Page Heading */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
@@ -229,7 +275,7 @@ export function PoliciesClient() {
             <div className="p-1.5 rounded-md bg-primary/10 text-primary">
               <FileText className="h-4 w-4" />
             </div>
-            <span className="text-xs font-medium uppercase tracking-wider">Total Policies</span>
+            <span className="text-xs font-medium text-muted-foreground">Total policies</span>
           </div>
           <span className="text-3xl font-bold text-foreground">{loading ? "..." : policies.length}</span>
         </Panel>
@@ -238,7 +284,7 @@ export function PoliciesClient() {
             <div className="p-1.5 rounded-md bg-green-500/10 text-green-500">
               <CheckCircle2 className="h-4 w-4" />
             </div>
-            <span className="text-xs font-medium uppercase tracking-wider">Active</span>
+            <span className="text-xs font-medium text-muted-foreground">Active</span>
           </div>
           <span className="text-3xl font-bold text-foreground">{loading ? "..." : activeCount}</span>
         </Panel>
@@ -247,7 +293,7 @@ export function PoliciesClient() {
             <div className="p-1.5 rounded-md bg-destructive/10 text-destructive">
               <PauseCircle className="h-4 w-4" />
             </div>
-            <span className="text-xs font-medium uppercase tracking-wider">Disabled</span>
+            <span className="text-xs font-medium text-muted-foreground">Disabled</span>
           </div>
           <span className="text-3xl font-bold text-foreground">{loading ? "..." : disabledCount}</span>
         </Panel>
@@ -256,7 +302,7 @@ export function PoliciesClient() {
             <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-500">
               <Clock className="h-4 w-4" />
             </div>
-            <span className="text-xs font-medium uppercase tracking-wider">Recently Updated (7d)</span>
+            <span className="text-xs font-medium text-muted-foreground">Recently updated (7d)</span>
           </div>
           <span className="text-3xl font-bold text-foreground">{loading ? "..." : recentlyUpdatedCount}</span>
         </Panel>
@@ -432,7 +478,7 @@ export function PoliciesClient() {
               <h2 className="text-lg font-bold">{editingPolicy ? "Edit Policy" : "Create Policy"}</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <span className="sr-only">Close</span>
-                <Search className="h-5 w-5 rotate-45" /> {/* Just a cross mark, visually using search + css or lucide X */}
+                <X className="h-5 w-5" />
               </button>
             </div>
             <div className="p-5 overflow-y-auto flex-1">
@@ -487,6 +533,35 @@ export function PoliciesClient() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-sm rounded-xl border border-border bg-background p-5 shadow-2xl">
+            <h3 className="text-base font-semibold text-foreground">Delete Policy</h3>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Are you sure you want to permanently delete <strong className="text-foreground">&quot;{deleteTarget.name}&quot;</strong>? This action cannot be undone and will immediately remove this guardrail from real-time evaluation.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={confirmDeleteAction}
+                className="rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 transition disabled:opacity-50"
+              >
+                {isDeleting ? "Deleting..." : "Delete Policy"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

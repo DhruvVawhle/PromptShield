@@ -21,9 +21,8 @@ import {
 import { Panel } from "@/components/ui/panel"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { useAuth } from "@/components/auth/AuthProvider"
-import { analyzePrompt, EXAMPLE_PROMPTS, type SecurityDecision } from "@/lib/demo/promptAnalyzer"
+import { EXAMPLE_PROMPTS, type SecurityDecision, type DemoAnalysisResult } from "@/lib/demo/promptAnalyzer"
 import {
-  createSecurityEvent,
   listSecurityEvents,
   subscribeSecurityEvents,
   getPeriodDateRange,
@@ -43,9 +42,6 @@ const CHIPS: ReadonlyArray<{ label: string; prompt: string }> = [
   { label: "Sensitive", prompt: EXAMPLE_PROMPTS[3].text },
 ]
 
-function generatePromptId(): string {
-  return `p_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
-}
 
 const DECISION_COLORS: Record<string, string> = {
   Allowed: "var(--severity-info)",
@@ -72,7 +68,20 @@ export default function DashboardRoutePage() {
   const { user, loading: authLoading } = useAuth()
   const [prompt, setPrompt] = React.useState(CHIPS[0].prompt)
   const [activeChip, setActiveChip] = React.useState("Safe")
-  const [result, setResult] = React.useState(() => analyzePrompt(CHIPS[0].prompt))
+  const [result, setResult] = React.useState<DemoAnalysisResult>({
+    decision: "ALLOW",
+    riskScore: 0,
+    steps: [
+      { id: "1", label: "Prompt Received", status: "pending", tone: "allow" },
+      { id: "2", label: "Threat Detection", status: "pending", tone: "allow" },
+      { id: "3", label: "Policy Evaluation", status: "pending", tone: "allow" },
+      { id: "4", label: "Security Decision", status: "pending", tone: "allow" },
+    ],
+    reasoning: "Enter a prompt and analyze to see the security pipeline.",
+    threats: [],
+    policy: { id: "allow", name: "Default Allow Policy", description: "No threats detected.", severity: "allow" },
+    primaryThreatLabel: null,
+  })
   const [copied, setCopied] = React.useState(false)
   const [period, setPeriod] = React.useState<"7d" | "4w" | "30d">("7d")
   const [analyzing, setAnalyzing] = React.useState(false)
@@ -82,40 +91,64 @@ export default function DashboardRoutePage() {
   const [dataLoading, setDataLoading] = React.useState(true)
   const [dataError, setDataError] = React.useState<string | null>(null)
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- inferred `user` vs `user?.uid` is equivalent; keep deps minimal
-  const runAnalyze = React.useCallback(() => {
-    if (analyzing) return
+  const runAnalyze = React.useCallback(async () => {
+    if (analyzing || !user) return
     setAnalyzing(true)
     setAnalysisError(null)
     try {
-      const r = analyzePrompt(prompt)
-      setResult(r)
-      const uid = user?.uid
-      if (uid) {
-        void createSecurityEvent(uid, {
-          promptId: generatePromptId(),
-          riskScore: r.riskScore,
-          threatDetected: r.threats.length > 0,
-          threatCategory: r.threats[0]?.category ?? null,
-          decision: r.decision,
-          policy: r.policy?.name ?? null,
-          confidence: null,
-          promptLength: prompt.length,
-          model: null,
-          prompt: r.sanitizedPrompt ?? prompt,
-          sanitizedPrompt: r.sanitizedPrompt ?? null,
-        }).catch((error) => {
-          console.error("Failed to persist security event:", error)
-          setAnalysisError("Analysis completed, but the event could not be saved. Check Firestore connectivity and security rules.")
-        })
+      const token = await user.getIdToken()
+      const res = await fetch("/api/v1/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ prompt }),
+      })
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null)
+        throw new Error(errData?.error?.message || errData?.error || `Analysis failed (HTTP ${res.status})`)
       }
+      const data = await res.json()
+      const threats: { category: string; label: string; policy: string; policyId: string }[] = (data.categories ?? []).map((cat: string) => ({
+        category: cat,
+        label: cat,
+        policy: data.policyApplied?.name ?? "Security Engine",
+        policyId: data.policyApplied?.id ?? "sys_default",
+      }))
+      const riskScore: number = data.riskScore ?? 0
+      const decision: SecurityDecision = data.decision ?? "ALLOW"
+      const sanitizedPrompt: string | undefined = data.sanitizedPrompt ?? undefined
+      const reasoning: string = data.reasoning ?? "Analysis complete."
+      const r: DemoAnalysisResult = {
+        decision,
+        riskScore,
+        steps: [
+          { id: "1", label: "Prompt Received", status: "complete" as const, result: `Validated · ${data.latencyMs ?? "—"} ms`, tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block" },
+          { id: "2", label: "Threat Detection", status: "complete" as const, result: threats.length > 0 ? `${threats[0].category} detected` : "No threats found", tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block" },
+          { id: "3", label: "Policy Evaluation", status: "complete" as const, result: data.policyApplied?.name ?? "Default Guardrail Policy", tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block" },
+          { id: "4", label: "Security Decision", status: "complete" as const, result: `${decision} — ${decision === "ALLOW" ? "Forwarded" : decision === "WARN" ? "Forwarded with flag" : decision === "SANITIZE" ? "Transformed" : "Denied"}`, tone: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block" },
+        ],
+        sanitizedPrompt,
+        reasoning,
+        threats,
+        policy: {
+          id: data.policyApplied?.id ?? "sys_default",
+          name: data.policyApplied?.name ?? "Default Guardrail Policy",
+          description: reasoning,
+          severity: decision === "ALLOW" ? "allow" : decision === "WARN" ? "warn" : decision === "SANITIZE" ? "sanitize" : "block",
+        },
+        primaryThreatLabel: threats[0]?.category ?? null,
+        confidence: data.confidence,
+      }
+      setResult(r)
     } catch (error) {
       console.error("Failed to analyze prompt:", error)
-      setAnalysisError("Analysis failed. Please try again.")
+      setAnalysisError(error instanceof Error ? error.message : "Analysis failed. Please try again.")
     } finally {
       setAnalyzing(false)
     }
-  }, [analyzing, prompt, user?.uid])
+  }, [analyzing, prompt, user])
 
   const sanitizedText = React.useMemo(() => {
     if (result.decision === "SANITIZE") return result.sanitizedPrompt ?? "The request has been sanitized to remove malicious instructions."
@@ -253,23 +286,21 @@ export default function DashboardRoutePage() {
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[360px_1fr] 2xl:grid-cols-[380px_1fr]">
         <div className="space-y-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Analyze a Prompt</p>
-            <p className="mt-1 max-w-[32ch] text-[13px] leading-5 text-muted-foreground">Test a prompt for security risks before it reaches the model.</p>
-          </div>
-
           <div className="flex items-start justify-between gap-3">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Analyze a Prompt</span>
-            <span className="text-right">
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Risk Score</span>
-              <span className="text-[22px] font-bold leading-none tracking-tight text-foreground">
-                {result.riskScore} <span className="text-[13px] font-medium text-muted-foreground">/ 100</span>
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Analyze prompt</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">Test a prompt for security risks before execution.</p>
+            </div>
+            <div className="text-right">
+              <span className="block text-xs font-medium text-muted-foreground">Risk score</span>
+              <span className="text-2xl font-bold leading-none tracking-tight text-foreground tabular-nums">
+                {result.riskScore} <span className="text-xs font-normal text-muted-foreground">/ 100</span>
               </span>
-            </span>
+            </div>
           </div>
 
           <Panel className="p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">User Prompt</p>
+            <label className="block text-xs font-medium text-muted-foreground">User prompt</label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -287,8 +318,8 @@ export default function DashboardRoutePage() {
                   aria-pressed={activeChip === c.label}
                   className={
                     activeChip === c.label
-                      ? "rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background"
-                      : "rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
+                      ? "rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background transition-all duration-150 active:scale-[0.97]"
+                      : "rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 active:scale-[0.97]"
                   }
                 >
                   {c.label}
@@ -299,7 +330,7 @@ export default function DashboardRoutePage() {
               type="button"
               onClick={runAnalyze}
               disabled={analyzing}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-4 py-2.5 text-sm font-medium text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-all duration-200 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 shadow-xs"
             >
               <Shield className="h-4 w-4" aria-hidden="true" />
               {analyzing ? "Analyzing…" : "Analyze Prompt"}
@@ -311,7 +342,7 @@ export default function DashboardRoutePage() {
           </Panel>
 
           <Panel className="p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Security Pipeline</p>
+            <p className="text-xs font-medium text-muted-foreground">Security pipeline</p>
             <div className="mt-4 flex items-start justify-between gap-1">
               {[
                 ["Prompt", "Received"],
@@ -322,7 +353,7 @@ export default function DashboardRoutePage() {
                 <div key={a} className="flex flex-1 items-center">
                   <div className="flex flex-col items-center gap-1.5">
                     <span className="flex h-2.5 w-2.5 items-center justify-center rounded-full bg-foreground" aria-hidden="true" />
-                    <span className="text-center text-[10px] font-semibold uppercase leading-3 tracking-[0.08em] text-muted-foreground">
+                    <span className="text-center text-xs font-medium leading-4 text-muted-foreground">
                       {a}
                       <br />
                       {b}
@@ -336,7 +367,7 @@ export default function DashboardRoutePage() {
 
           <Panel className="p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Security Decision</p>
+              <p className="text-xs font-medium text-muted-foreground">Security decision</p>
               <ToneBadge decision={result.decision} />
             </div>
             <div className="mt-4 space-y-2">
@@ -355,7 +386,7 @@ export default function DashboardRoutePage() {
 
           <Panel className="p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Sanitized Prompt</p>
+              <p className="text-xs font-medium text-muted-foreground">Sanitized prompt</p>
               <button
                 type="button"
                 onClick={onCopy}
@@ -374,7 +405,7 @@ export default function DashboardRoutePage() {
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-foreground">Security Overview</h2>
+              <h2 className="text-base font-semibold text-foreground">Security overview</h2>
               <p className="mt-1 text-sm text-muted-foreground">Overview of detected threats, risk trends, and security decisions.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -417,11 +448,11 @@ export default function DashboardRoutePage() {
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <Panel className="p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Threats Detected</p>
+            <Panel className="p-4 hover-lift">
+              <p className="text-xs font-medium text-muted-foreground">Threats detected</p>
               <div className="mt-2 flex items-end justify-between gap-2">
-                <span className="text-2xl font-semibold tracking-tight text-foreground">{dataLoading ? "—" : stats.threatsDetected}</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <span className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">{dataLoading ? "—" : stats.threatsDetected}</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 tabular-nums">
                   <TrendingUp className="h-3 w-3" /> {dataLoading ? "—" : (threatsDelta ?? "—")}
                 </span>
               </div>
@@ -429,13 +460,13 @@ export default function DashboardRoutePage() {
                 <MiniSpark color="var(--severity-critical)" />
               </div>
             </Panel>
-            <Panel className="p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Avg Risk Score</p>
+            <Panel className="p-4 hover-lift">
+              <p className="text-xs font-medium text-muted-foreground">Average risk score</p>
               <div className="mt-2 flex items-end justify-between gap-2">
-                <span className="text-2xl font-semibold tracking-tight text-foreground">
-                  {dataLoading ? "—" : stats.avgRiskScore} <span className="text-sm font-medium text-muted-foreground">/ 100</span>
+                <span className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">
+                  {dataLoading ? "—" : stats.avgRiskScore} <span className="text-xs font-normal text-muted-foreground">/ 100</span>
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 tabular-nums">
                   <TrendingUp className="h-3 w-3" /> {dataLoading ? "—" : (riskDelta ?? "—")}
                 </span>
               </div>
@@ -443,10 +474,10 @@ export default function DashboardRoutePage() {
                 <MiniSpark color="var(--severity-high)" />
               </div>
             </Panel>
-            <Panel className="p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Decision Trend</p>
+            <Panel className="p-4 hover-lift">
+              <p className="text-xs font-medium text-muted-foreground">Decision trend</p>
               <div className="mt-2 flex items-end justify-between gap-2">
-                <span className="text-[13px] font-medium text-foreground">{dataLoading ? "—" : decisionTrendLabel}</span>
+                <span className="text-sm font-medium text-foreground">{dataLoading ? "—" : decisionTrendLabel}</span>
                 <ArrowUpRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               </div>
               <div className="mt-3 flex justify-end">
@@ -547,7 +578,7 @@ export default function DashboardRoutePage() {
                   </ResponsiveContainer>
                   <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-xl font-semibold leading-none text-foreground">{totalCategoryEvents}</span>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Total</span>
+                    <span className="text-xs font-medium text-muted-foreground">Total</span>
                   </span>
                 </div>
                 <ul className="flex-1 space-y-2 py-1">

@@ -12,10 +12,7 @@ export default function AboutPage() {
   return (
     <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
       <article className="rounded-[28px] border border-border bg-surface p-6 shadow-sm sm:p-8 lg:p-10">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          About PromptShield
-        </p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-[-0.06em] text-foreground sm:text-5xl">
+        <h1 className="text-3xl font-semibold tracking-[-0.06em] text-foreground sm:text-5xl">
           A security layer for the modern AI stack.
         </h1>
 

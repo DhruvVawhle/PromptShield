@@ -70,22 +70,21 @@ function ThemeToggle({ onLightSection }: { onLightSection?: boolean }) {
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       onClick={() => setTheme(isDark ? "light" : "dark")}
       className={cn(
-        "relative inline-flex h-[26px] w-[52px] shrink-0 items-center rounded-full border px-[2px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-        onLightSection
-          ? "border-border bg-muted focus-visible:ring-ring focus-visible:ring-offset-page"
-          : "border-white/15 bg-black hover:border-white/25 focus-visible:ring-white/40 focus-visible:ring-offset-black"
+        "relative inline-flex h-[28px] w-[54px] shrink-0 items-center rounded-full border px-[2px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+        isDark
+          ? "border-white/20 bg-white/10 hover:bg-white/15 focus-visible:ring-white focus-visible:ring-offset-black"
+          : "border-border bg-muted/80 hover:bg-muted focus-visible:ring-ring focus-visible:ring-offset-page"
       )}
     >
-      <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-[6px]" aria-hidden="true">
-        <Sun className={cn("h-3.5 w-3.5 shrink-0 transition-colors", isDark ? (onLightSection ? "text-muted-foreground" : "text-white/35") : (onLightSection ? "text-foreground" : "text-white"))} />
-        <Moon className={cn("h-3 w-3 shrink-0 transition-colors", isDark ? (onLightSection ? "text-foreground" : "text-white") : (onLightSection ? "text-muted-foreground" : "text-white/35"))} />
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-[7px]" aria-hidden="true">
+        <Sun className={cn("h-3.5 w-3.5 shrink-0 transition-colors duration-200", isDark ? "text-white/40" : "text-amber-500 fill-amber-500/20")} />
+        <Moon className={cn("h-3.5 w-3.5 shrink-0 transition-colors duration-200", isDark ? "text-indigo-400 fill-indigo-400/20" : "text-muted-foreground/50")} />
       </span>
       <span
         aria-hidden="true"
         className={cn(
-          "relative z-10 inline-flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full shadow-sm transition-transform duration-200 ease-out",
-          onLightSection ? "bg-background" : "bg-white",
-          isDark ? "translate-x-[26px]" : "translate-x-0",
+          "relative z-10 inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full shadow-sm transition-transform duration-200 ease-out",
+          isDark ? "translate-x-[24px] bg-white text-black" : "translate-x-0 bg-surface text-foreground shadow-xs"
         )}
       />
     </button>
@@ -154,14 +153,17 @@ export function NavigationMenu({
 
   React.useEffect(() => {
     const hero = document.getElementById("home");
-    if (!hero) return;
+    if (!hero) {
+      setIsOnHero(false);
+      return;
+    }
     const obs = new IntersectionObserver(
-      ([entry]) => setIsOnHero(entry ? entry.isIntersecting : true),
+      ([entry]) => setIsOnHero(entry ? entry.isIntersecting : false),
       { threshold: 0, rootMargin: "-64px 0px 0px 0px" },
     );
     obs.observe(hero);
     return () => obs.disconnect();
-  }, []);
+  }, [activePath]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -204,8 +206,15 @@ export function NavigationMenu({
     return () => query.removeEventListener("change", handleChange);
   }, []);
 
+  const { resolvedTheme } = useTheme();
+  const mounted = React.useSyncExternalStore(
+    React.useCallback(() => () => {}, []),
+    React.useCallback(() => true, []),
+    React.useCallback(() => false, []),
+  );
+  const isDark = mounted ? resolvedTheme === "dark" : false;
   const indicatorLabel = hovered ?? null;
-  const onLightSection = !isOnHero;
+  const onLightSection = !isDark;
 
   const handleSignOut = async () => {
     await onSignOut();
@@ -219,10 +228,10 @@ export function NavigationMenu({
     <header className={cn("fixed inset-x-0 top-0 z-[60]", className)}>
       <div
         className={cn(
-          "border-b py-3 transition-colors duration-300",
+          "border-b py-3 transition-colors duration-200",
           onLightSection
-            ? "border-border/70 bg-page/90 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.55)] backdrop-blur-xl"
-            : "border-white/10 bg-[rgba(8,10,14,0.72)] shadow-[0_12px_30px_-28px_rgba(0,0,0,0.65)] backdrop-blur-xl",
+            ? "border-border/80 bg-page/92 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.12)] backdrop-blur-xl"
+            : "border-white/10 bg-[rgba(8,10,14,0.85)] shadow-[0_12px_30px_-28px_rgba(0,0,0,0.65)] backdrop-blur-xl",
         )}
       >
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
@@ -246,14 +255,14 @@ export function NavigationMenu({
                 if (item.label === "Product") {
                   return (
                     <div key={item.label} className="relative flex items-center">
-                      <ProductMenu />
+                      <ProductMenu onLightSection={onLightSection} />
                     </div>
                   );
                 }
                 if (item.label === "Resources") {
                   return (
                     <div key={item.label} className="relative flex items-center">
-                      <ResourcesMenu />
+                      <ResourcesMenu onLightSection={onLightSection} />
                     </div>
                   );
                 }
@@ -313,52 +322,61 @@ export function NavigationMenu({
                     <button
                       type="button"
                       className={cn(
-                        "flex h-8 items-center gap-2 rounded-full px-3 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                        "flex h-8 items-center gap-2 rounded-full border px-3 py-1 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                         onLightSection
-                          ? "bg-muted text-foreground hover:bg-muted/80 focus-visible:ring-ring focus-visible:ring-offset-page"
-                          : "bg-white/5 hover:bg-white/10 focus-visible:ring-white focus-visible:ring-offset-black"
+                          ? "border-border bg-surface text-foreground hover:bg-surface-subtle shadow-xs focus-visible:ring-ring focus-visible:ring-offset-page"
+                          : "border-white/20 bg-white/10 hover:bg-white/15 text-white focus-visible:ring-white focus-visible:ring-offset-black"
                       )}
                       aria-label={showSkeleton ? "Loading user" : displayName}
                       aria-expanded={profileMenuOpen}
                       onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                     >
                       {showSkeleton ? (
-                        <span className="h-7 w-7 animate-pulse rounded-full bg-white/20" aria-hidden="true" />
+                        <span className="h-6 w-6 animate-pulse rounded-full bg-muted/40" aria-hidden="true" />
                       ) : photoURL ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={photoURL} alt="" className="h-7 w-7 rounded-full object-cover" />
+                        <img src={photoURL} alt="" className="h-6 w-6 rounded-full object-cover ring-1 ring-border" />
                       ) : (
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-background">
+                        <span className={cn(
+                          "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold",
+                          onLightSection
+                            ? "bg-primary/10 text-primary border border-primary/20"
+                            : "bg-white/20 text-white border border-white/30"
+                        )}>
                           {initialsFromName(displayName)}
                         </span>
                       )}
-                      <span className="hidden max-w-[10ch] truncate text-sm font-medium sm:inline">
+                      <span className={cn(
+                        "hidden max-w-[12ch] truncate text-sm font-medium sm:inline",
+                        onLightSection ? "text-foreground" : "text-white"
+                      )}>
                         {showSkeleton ? "…" : displayName}
                       </span>
-                      <ChevronDown className={cn("hidden h-3.5 w-3.5 sm:block", onLightSection ? "text-muted-foreground" : "text-white/70")} aria-hidden="true" />
+                      <ChevronDown className={cn("hidden h-3.5 w-3.5 sm:block transition-transform duration-200", onLightSection ? "text-muted-foreground" : "text-white/80", profileMenuOpen && "rotate-180")} aria-hidden="true" />
                     </button>
                   }
                 />
-                <DropdownMenuContent align="end" className="w-64 bg-slate-900 border-slate-800">
-                  <div className="px-3 py-2 border-b border-slate-800">
-                    <p className="truncate text-sm font-medium text-white">{displayName}</p>
-                    <p className="truncate text-xs text-slate-400">{email || "—"}</p>
+                <DropdownMenuContent align="end" className="w-64 border border-border bg-popover text-popover-foreground shadow-2xl">
+                  <div className="px-3.5 py-2.5 border-b border-border bg-surface-subtle">
+                    <p className="truncate text-sm font-semibold text-popover-foreground">{displayName}</p>
+                    <p className="truncate text-xs text-muted-foreground">{email || "—"}</p>
                   </div>
-                  <DropdownMenuItem onClick={() => { router.push("/dashboard"); setProfileMenuOpen(false); }}>
-                    <User className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                    Dashboard
+                  <DropdownMenuItem onClick={() => { router.push("/dashboard"); setProfileMenuOpen(false); }} className="cursor-pointer text-popover-foreground hover:bg-muted hover:text-popover-foreground">
+                    <User className="mr-2 h-4 w-4 shrink-0 text-muted-foreground group-hover/dropdown-menu-item:text-popover-foreground" aria-hidden="true" />
+                    <span className="font-medium text-popover-foreground">Dashboard</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { router.push("/settings"); setProfileMenuOpen(false); }}>
-                    <Settings className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                    Settings
+                  <DropdownMenuItem onClick={() => { router.push("/settings"); setProfileMenuOpen(false); }} className="cursor-pointer text-popover-foreground hover:bg-muted hover:text-popover-foreground">
+                    <Settings className="mr-2 h-4 w-4 shrink-0 text-muted-foreground group-hover/dropdown-menu-item:text-popover-foreground" aria-hidden="true" />
+                    <span className="font-medium text-popover-foreground">Settings</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="border-slate-800" />
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={handleSignOut}
-                    className="text-red-400 focus-visible:text-red-400"
+                    variant="destructive"
+                    className="cursor-pointer text-destructive focus:text-destructive"
                   >
-                    <LogOut className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                    Sign out
+                    <LogOut className="mr-2 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+                    <span className="font-medium text-destructive">Sign out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -411,7 +429,7 @@ export function NavigationMenu({
               animate={reducedMotion ? { opacity: 1 } : { height: "auto", opacity: 1 }}
               exit={reducedMotion ? { opacity: 1 } : { height: 0, opacity: 0 }}
               transition={reducedMotion ? { duration: 0 } : { duration: 0.28, ease: EASE }}
-              className={cn("overflow-hidden border-t md:hidden", onLightSection ? "border-border/60" : "border-white/10")}
+              className={cn("overflow-hidden border-t md:hidden backdrop-blur-2xl", onLightSection ? "border-border/80 bg-page/98 text-foreground" : "border-white/10 bg-[#080a0e]/95 text-white")}
             >
               <nav
                 aria-label="Mobile"
@@ -487,20 +505,20 @@ export function NavigationMenu({
 
                   {isAuthenticated ? (
                     <div className="flex flex-col gap-2 border-t border-border/60 pt-4 mt-3">
-                      <div className="flex items-center gap-3 rounded-xl bg-slate-950 px-3 py-2">
+                      <div className="flex items-center gap-3 rounded-xl bg-surface-subtle border border-border px-3 py-2.5">
                         {showSkeleton ? (
-                          <span className="h-9 w-9 animate-pulse rounded-full bg-white/20" aria-hidden="true" />
+                          <span className="h-9 w-9 animate-pulse rounded-full bg-muted" aria-hidden="true" />
                         ) : photoURL ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={photoURL} alt="" className="h-9 w-9 rounded-full object-cover" />
+                          <img src={photoURL} alt="" className="h-9 w-9 rounded-full object-cover ring-1 ring-border" />
                         ) : (
-                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-[12px] font-semibold text-background">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/20 text-[12px] font-semibold">
                             {initialsFromName(displayName)}
                           </span>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="truncate text-sm font-medium text-white">{displayName}</p>
-                          <p className="truncate text-xs text-slate-400">{email || "—"}</p>
+                          <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
+                          <p className="truncate text-xs text-muted-foreground">{email || "—"}</p>
                         </div>
                       </div>
                       <Link

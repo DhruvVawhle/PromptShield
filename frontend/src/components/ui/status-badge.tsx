@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const statusBadgeVariants = cva(
-  "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors",
+  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors",
   {
     variants: {
       tone: {
@@ -28,14 +28,23 @@ export function StatusBadge({
   label,
   tone,
   className,
+  pulse,
 }: {
   label: string
   tone?: VariantProps<typeof statusBadgeVariants>["tone"]
   className?: string
+  pulse?: boolean
 }) {
+  const shouldPulse = pulse ?? (tone === "block" || tone === "critical" || tone === "warn" || tone === "high")
+
   return (
     <span className={cn(statusBadgeVariants({ tone }), className)}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+      <span className="relative flex h-1.5 w-1.5 items-center justify-center" aria-hidden="true">
+        {shouldPulse && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-60" />
+        )}
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
+      </span>
       {label}
     </span>
   )

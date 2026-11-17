@@ -15,7 +15,8 @@ PromptShield is an enterprise-grade AI security gateway and management platform 
 | **Enforce** | Guardrail Policies | Strictest-action-wins deterministic precedence engine with customizable risk thresholds and action overrides (`BLOCK`, `SANITIZE`, `WARN`, `ALLOW`). |
 | **Audit** | Immutable Audit Trail | Automatic, tamper-resistant audit logging for policy mutations, security decisions, unauthorized access attempts, and incident triaging. |
 | **Triage** | Incident Resolution | End-to-end incident management with status lifecycle tracking (`OPEN`, `INVESTIGATING`, `RESOLVED`, `FALSE_POSITIVE`) and sanitized resolution notes. |
-| **Diagnose** | Platform Telemetry | Continuous bounded liveness and readiness probes across Firestore, Upstash Redis, OmniRoute Gateway, and the compiled rule engine. |
+| **Diagnose** | Platform Telemetry | Continuous bounded liveness and readiness probes across Firestore, Upstash Redis, AI Gateway (Groq / OmniRoute), and the compiled rule engine. |
+| **Experience** | Awwwards & Impeccable UX | Smooth Lenis inertia scrolling synchronized with GSAP tickers, Cuberto magnetic follower cursor, top-edge kinetic scroll tracker, and Hallmark-verified anti-slop design. |
 
 ### Threat Coverage
 
@@ -36,11 +37,12 @@ PromptShield/
 ├── frontend/                  # Next.js 16 full-stack application
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── (public)/      # Public pages (Landing, About, Security, Architecture)
-│   │   │   ├── (dashboard)/   # Authenticated dashboard (Chat, Incidents, Policies, Audit Logs, System)
+│   │   │   ├── (public)/      # Public pages (Landing, About, Security, Architecture, Contact, Privacy, Terms)
+│   │   │   ├── (dashboard)/   # Authenticated dashboard (Chat, Incidents, Policies, Audit Logs, Users, System)
 │   │   │   │   ├── incidents/ # Incident triage and review drawer
 │   │   │   │   ├── policies/  # Custom guardrail policy management
 │   │   │   │   ├── audit-logs/# Immutable audit log explorer
+│   │   │   │   ├── users/     # Multi-tenant RBAC access management
 │   │   │   │   └── system/    # Live platform telemetry and dependency health
 │   │   │   └── api/
 │   │   │       ├── ai/        # POST /api/ai (Secured inference proxy)
@@ -51,7 +53,13 @@ PromptShield/
 │   │   │           ├── audit-logs/    # GET /api/v1/audit-logs
 │   │   │           ├── system/status/ # GET /api/v1/system/status
 │   │   │           └── incidents/     # GET, PATCH /api/v1/incidents
-│   │   ├── components/        # Reusable UI & dashboard components
+│   │   ├── components/        # Reusable UI, dashboard, and public section components
+│   │   │   ├── ui/
+│   │   │   │   ├── cuberto-cursor.tsx # Cuberto magnetic spring follower cursor
+│   │   │   │   ├── dropdown-menu.tsx  # Accessible high-contrast popover menus
+│   │   │   │   ├── navigation-menu.tsx# Dynamic responsive navbar with reactive hero detection
+│   │   │   │   └── status-badge.tsx   # Clean status pills
+│   │   │   └── LenisProvider.tsx      # Lenis smooth scrolling with GSAP ticker & anchor interceptor
 │   │   └── lib/
 │   │       ├── server/        # Server-only modules (Firebase Admin, Security Engine, Normalizer, Rules)
 │   │       │   ├── security-engine.ts
@@ -64,7 +72,7 @@ PromptShield/
 │   │       ├── audit-logs.ts  # Client SDK & shared types for Audit Logs
 │   │       ├── incidents.ts   # Client SDK & shared types for Incidents
 │   │       ├── system-status.ts# Client SDK & shared types for System Diagnostics
-│   │       └── omniroute.ts   # OmniRoute AI Gateway integration
+│   │       └── omniroute.ts   # AI Gateway integration (Groq / OmniRoute / OpenAI-compatible)
 │   └── package.json
 └── package.json               # Root workspace scripts
 ```
@@ -133,28 +141,6 @@ Retrieve tamper-resistant audit records scoped strictly to the authenticated ten
 - `limit`: Bounded page size (Default: `20`, Max: `100`).
 - `cursor`: Base64 cursor for deterministic pagination.
 
-**Response (`200 OK`):**
-```json
-{
-  "logs": [
-    {
-      "id": "audit-doc-id",
-      "action": "POLICY_CREATED",
-      "timestamp": "2026-10-10T12:00:00.000Z",
-      "details": {
-        "policyName": "Custom Jailbreak Guardrail",
-        "action": "BLOCK"
-      }
-    }
-  ],
-  "pagination": {
-    "limit": 20,
-    "hasMore": false,
-    "nextCursor": null
-  }
-}
-```
-
 ---
 
 ### 4. System Health & Platform Diagnostics API
@@ -163,62 +149,6 @@ Reports process liveness and bounded dependency readiness probes (`≤ 3000ms` t
 
 **Query Parameters:**
 - `fresh`: Set to `"true"` to bypass cache and execute fresh dependency probes.
-
-**Response (`200 OK`):**
-```json
-{
-  "status": "healthy",
-  "timestamp": "2026-10-14T00:25:00.000Z",
-  "liveness": {
-    "status": "alive",
-    "uptimeSeconds": 3120,
-    "timestamp": "2026-10-14T00:25:00.000Z",
-    "environment": "production",
-    "nodeVersion": "v22.14.0"
-  },
-  "readiness": {
-    "status": "healthy",
-    "dependencies": [
-      {
-        "name": "Firestore Database",
-        "category": "database",
-        "status": "healthy",
-        "required": true,
-        "message": "Firestore connection active and operational.",
-        "latencyMs": 14,
-        "lastChecked": "2026-10-14T00:25:00.000Z"
-      },
-      {
-        "name": "PromptShield Security Engine",
-        "category": "security_engine",
-        "status": "healthy",
-        "required": true,
-        "message": "Operational with 10 detection rules compiled and verified.",
-        "latencyMs": 2,
-        "lastChecked": "2026-10-14T00:25:00.000Z"
-      },
-      {
-        "name": "Upstash Redis (Rate Limiting)",
-        "category": "cache",
-        "status": "healthy",
-        "required": false,
-        "message": "Redis rate limiting store responsive.",
-        "latencyMs": 8,
-        "lastChecked": "2026-10-14T00:25:00.000Z"
-      },
-      {
-        "name": "OmniRoute AI Gateway",
-        "category": "gateway",
-        "status": "healthy",
-        "required": false,
-        "message": "OmniRoute is available.",
-        "latencyMs": 45,
-        "lastChecked": "2026-10-14T00:25:00.000Z"
-      }
-    ]
-  }
-}
-```
 
 ---
 
@@ -231,7 +161,7 @@ Reports process liveness and bounded dependency readiness probes (`≤ 3000ms` t
 
 ### 6. Inference Proxy API
 #### `POST /api/ai`
-Proxies validated prompts through the OmniRoute gateway only after prompt security checks and rate limits pass. Fails closed (`502`) if security event persistence fails.
+Proxies validated prompts through the upstream AI gateway (Groq, OmniRoute, or OpenAI-compatible) only after prompt security checks and rate limits pass. Fails closed (`502`) if security event persistence fails. Supports full server-sent event (SSE) token streaming.
 
 ---
 
@@ -259,7 +189,7 @@ Proxies validated prompts through the OmniRoute gateway only after prompt securi
 - [Node.js](https://nodejs.org/) 20+
 - A [Firebase](https://firebase.google.com/) project (with Firestore and Authentication enabled)
 - (Optional) [Upstash Redis](https://upstash.com/) for distributed rate limiting
-- (Optional) [OmniRoute](https://github.com/DhruvVawhle/OmniRoute) or an OpenAI-compatible gateway
+- [Groq](https://groq.com/) or an OpenAI-compatible gateway (OmniRoute, OpenRouter)
 
 ### 1. Clone & Configure
 ```bash
@@ -270,6 +200,11 @@ cp frontend/.env.example frontend/.env.local
 
 Populate `frontend/.env.local`:
 ```env
+# AI Gateway Configuration (Groq / OmniRoute)
+OMNIROUTE_BASE_URL=https://api.groq.com/openai/v1
+OMNIROUTE_API_KEY=gsk_your_groq_api_key
+OMNIROUTE_MODEL=qwen/qwen3.8-27b
+
 # Firebase Public Configuration
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -282,12 +217,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxx@your_project.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 
-# OmniRoute AI Gateway (Optional)
-OMNIROUTE_BASE_URL=http://localhost:20128/v1
-OMNIROUTE_API_KEY=your_gateway_key
-OMNIROUTE_MODEL=auto
-
-# Upstash Redis (Optional for Rate Limiting)
+# Upstash Redis (Optional for Distributed Rate Limiting)
 UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
 UPSTASH_REDIS_REST_TOKEN=your_upstash_token
 ```
@@ -306,18 +236,13 @@ Open **http://localhost:3000** in your browser.
 Run the full automated test suite (109 tests covering all security engines, persistence, APIs, and route handlers):
 
 ```bash
-# Run all server and unit test suites
-npm --prefix frontend run test
-# Or execute directly via Node test runner:
-npx --prefix frontend tsx --tsconfig frontend/tsconfig.json --test frontend/src/lib/server/__tests__/*.test.ts
+# Run all server and unit test suites (109 tests)
+npm test
 
 # Run TypeScript compiler check
 npx --prefix frontend tsc --project frontend/tsconfig.json --noEmit
 
-# Run ESLint
-npm run lint
-
-# Run Next.js Production Build
+# Run Next.js Production Build (Compiles all 34 routes)
 npm run build
 ```
 
@@ -330,11 +255,13 @@ npm run build
 | Framework | [Next.js 16](https://nextjs.org/) (App Router, Turbopack) |
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS 4 |
+| Motion & Physics | [Lenis](https://lenis.darkroom.engineering/) (Smooth Scroll), [GSAP](https://gsap.com/) (ScrollTrigger Ticker), [Framer Motion](https://www.framer.com/motion/) |
+| Cursor & Interaction | Custom Cuberto Magnetic Spring Follower |
 | Component UI | shadcn/ui, Radix UI, Base UI |
 | Graphics & Charts | Three.js, Recharts, Lucide Icons |
 | Backend & Auth | Firebase Admin SDK, Firebase Auth, Cloud Firestore |
 | Rate Limiting | Upstash Redis & `@upstash/ratelimit` |
-| AI Gateway | OmniRoute (OpenAI-compatible) |
+| AI Inference Engine | [Groq](https://groq.com/) / OmniRoute / OpenAI-compatible |
 
 ---
 

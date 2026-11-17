@@ -89,14 +89,12 @@ function FAQSection() {
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] lg:gap-8 xl:gap-10">
           <div className="overflow-hidden rounded-[28px] border border-border bg-surface">
             <div className="p-6 sm:p-7 lg:p-8">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">FAQS</p>
-              <h2 className="mt-3 text-[28px] font-semibold leading-[1.05] tracking-[-0.04em] text-foreground sm:text-[30px] lg:text-[32px]">
+              <h2 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.04em] text-foreground sm:text-[30px] lg:text-[32px]">
                 Everything you need to know about PromptShield
               </h2>
               <p className="mt-4 text-[13px] leading-6 text-muted-foreground">
                 Can&apos;t find what you&apos;re looking for? Reach out to our{" "}
-                <span className="font-semibold text-foreground">security team</span> for assistance.{" "}
-                <span aria-hidden="true">→</span>
+                <span className="font-semibold text-foreground">security team</span> for assistance.
               </p>
             </div>
             <div className="px-4 pb-4 sm:px-5 sm:pb-5">
@@ -236,16 +234,6 @@ function FinalCTA() {
           </div>
 
           <div className="relative z-10 mx-auto max-w-[760px] text-center">
-            <motion.p
-              initial={reducedMotion ? false : { opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.45, delay: 0.08 }}
-              className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground"
-            >
-              BUILD SAFER AI
-            </motion.p>
-
             <motion.h2
               initial={reducedMotion ? false : { opacity: 0, y: 14 }}
               whileInView={{ opacity: 1, y: 0 }}

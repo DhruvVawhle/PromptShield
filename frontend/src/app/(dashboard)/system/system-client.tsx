@@ -203,9 +203,9 @@ export function SystemClient() {
       {/* Overview KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Overall Status Card */}
-        <Panel className="p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-muted-foreground text-xs uppercase tracking-wider font-semibold">
-            <span>Platform Status</span>
+        <Panel className="p-4 flex flex-col justify-between hover-lift">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Platform status</span>
             <Activity className="h-4 w-4" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -223,16 +223,16 @@ export function SystemClient() {
         </Panel>
 
         {/* Process Uptime Card */}
-        <Panel className="p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-muted-foreground text-xs uppercase tracking-wider font-semibold">
-            <span>Process Uptime</span>
+        <Panel className="p-4 flex flex-col justify-between hover-lift">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
+            <span>Process uptime</span>
             <Clock className="h-4 w-4" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             {loading && !data ? (
               <div className="h-7 w-20 bg-muted/20 animate-pulse rounded" />
             ) : (
-              <div className="text-2xl font-bold tracking-tight">
+              <div className="text-2xl font-bold tracking-tight tabular-nums">
                 {data ? formatUptime(data.liveness.uptimeSeconds) : "—"}
               </div>
             )}
@@ -243,8 +243,8 @@ export function SystemClient() {
         </Panel>
 
         {/* Environment Card */}
-        <Panel className="p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+        <Panel className="p-4 flex flex-col justify-between hover-lift">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
             <span>Environment</span>
             <Cpu className="h-4 w-4" />
           </div>
@@ -263,8 +263,8 @@ export function SystemClient() {
         </Panel>
 
         {/* Readiness Count Card */}
-        <Panel className="p-4 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-muted-foreground text-xs uppercase tracking-wider font-semibold">
+        <Panel className="p-4 flex flex-col justify-between hover-lift">
+          <div className="flex items-center justify-between text-muted-foreground text-xs font-medium">
             <span>Dependencies</span>
             <Server className="h-4 w-4" />
           </div>
@@ -272,7 +272,7 @@ export function SystemClient() {
             {loading && !data ? (
               <div className="h-7 w-16 bg-muted/20 animate-pulse rounded" />
             ) : (
-              <div className="text-2xl font-bold tracking-tight">
+              <div className="text-2xl font-bold tracking-tight tabular-nums">
                 {data
                   ? `${data.readiness.dependencies.filter((d) => d.status === "healthy").length} / ${data.readiness.dependencies.length}`
                   : "—"}

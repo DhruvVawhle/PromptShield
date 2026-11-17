@@ -193,11 +193,17 @@ export async function POST(request: Request) {
       }
     });
 
+    const responseHeaders = new Headers();
+    responseHeaders.set("Content-Type", "text/plain; charset=utf-8");
+    responseHeaders.set("Transfer-Encoding", "chunked");
+    responseHeaders.set("X-Security-Decision", analysisResult.decision);
+    responseHeaders.set("X-Security-Risk-Score", analysisResult.riskScore.toString());
+    if (analysisResult.decision === "SANITIZE" && analysisResult.sanitizedPrompt) {
+      responseHeaders.set("X-Sanitized-Prompt", encodeURIComponent(analysisResult.sanitizedPrompt));
+    }
+
     return new Response(stream, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
-      },
+      headers: responseHeaders,
     });
   } catch (error) {
     const safeMessage = getSafeProviderMessage(error);

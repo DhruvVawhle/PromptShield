@@ -5,6 +5,7 @@ import {
   Shield, 
   Search, 
   ShieldCheck, 
+  ShieldAlert,
   BarChart3, 
   Send, 
   Lightbulb, 
@@ -24,6 +25,7 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   error?: boolean;
+  securityNotice?: string;
 };
 
 export function ChatClient() {
@@ -85,6 +87,13 @@ export function ChatClient() {
         throw new Error(data?.error?.message || `Failed to get AI response. Status: ${res.status}`);
       }
 
+      const decision = res.headers.get("X-Security-Decision");
+      const notice = decision === "SANITIZE"
+        ? "PromptShield sanitized adversarial instructions before forwarding."
+        : decision === "WARN"
+          ? "PromptShield flagged potential anomalies (forwarded under monitor policy)."
+          : undefined;
+
       const assistantMessageId = crypto.randomUUID();
       
       setMessages(prev => [
@@ -93,6 +102,7 @@ export function ChatClient() {
           id: assistantMessageId,
           role: "assistant",
           content: "",
+          securityNotice: notice,
         }
       ]);
 
@@ -157,12 +167,12 @@ export function ChatClient() {
               Get answers about AI security, analyze prompts, understand threats, and learn best practices.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-primary">
-              SECURE BY DEFAULT
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+              Secure by default
             </span>
-            <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              POWERED BY PROMPTSHIELD
+            <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+              Protected by PromptShield
             </span>
           </div>
         </div>
@@ -283,6 +293,12 @@ export function ChatClient() {
                               : "bg-muted/30 border border-border text-foreground rounded-2xl rounded-tl-sm max-w-[85%] whitespace-pre-wrap leading-relaxed"
                         )}
                       >
+                        {msg.securityNotice ? (
+                          <div className="mb-2.5 flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                            <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+                            <span>{msg.securityNotice}</span>
+                          </div>
+                        ) : null}
                         {msg.content}
                       </div>
                     </div>
