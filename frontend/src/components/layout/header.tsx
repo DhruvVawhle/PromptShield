@@ -163,20 +163,20 @@ export function Header() {
                 </Button>
               }
             />
-            <DropdownMenuContent align="end" className="w-72 border border-border bg-popover text-popover-foreground shadow-xl">
-              <div className="px-4 py-3 border-b border-border bg-surface-subtle">
-                <p className="truncate text-sm font-semibold text-popover-foreground">{displayName}</p>
-                <p className="truncate text-xs text-muted-foreground">{email || "—"}</p>
+            <DropdownMenuContent align="end" className="w-72 border border-border bg-popover text-popover-foreground shadow-xl p-1.5">
+              <div className="px-4 py-3 mb-1 rounded-lg border-b border-border/80 bg-surface-subtle/80">
+                <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+                <p className="truncate text-xs text-muted-foreground font-normal">{email || "—"}</p>
               </div>
               <DropdownMenuItem 
                 onClick={() => router.push("/dashboard")} 
                 className={cn(
-                  "px-3 py-2 cursor-pointer text-popover-foreground hover:bg-muted hover:text-popover-foreground",
-                  pathname.startsWith("/dashboard") && "bg-muted font-medium text-popover-foreground"
+                  "px-3 py-2 cursor-pointer text-foreground hover:bg-muted hover:text-foreground",
+                  pathname.startsWith("/dashboard") && "bg-muted font-medium text-foreground"
                 )}
               >
-                <LayoutDashboard className="mr-3 h-4 w-4 shrink-0 text-muted-foreground group-hover/dropdown-menu-item:text-popover-foreground" aria-hidden="true" />
-                <span className="font-medium text-popover-foreground">Dashboard</span>
+                <LayoutDashboard className="mr-3 h-4 w-4 shrink-0 text-foreground/75 group-hover/dropdown-menu-item:text-foreground" aria-hidden="true" />
+                <span className="font-medium text-foreground">Dashboard</span>
                 <DropdownMenuShortcut>
                   <ChevronRight className="h-3.5 w-3.5 opacity-50" aria-hidden="true" />
                 </DropdownMenuShortcut>
@@ -184,12 +184,12 @@ export function Header() {
               <DropdownMenuItem 
                 onClick={() => router.push("/profile")} 
                 className={cn(
-                  "px-3 py-2 cursor-pointer text-popover-foreground hover:bg-muted hover:text-popover-foreground",
-                  pathname.startsWith("/profile") && "bg-muted font-medium text-popover-foreground"
+                  "px-3 py-2 cursor-pointer text-foreground hover:bg-muted hover:text-foreground",
+                  pathname.startsWith("/profile") && "bg-muted font-medium text-foreground"
                 )}
               >
-                <User className="mr-3 h-4 w-4 shrink-0 text-muted-foreground group-hover/dropdown-menu-item:text-popover-foreground" aria-hidden="true" />
-                <span className="font-medium text-popover-foreground">Profile</span>
+                <User className="mr-3 h-4 w-4 shrink-0 text-foreground/75 group-hover/dropdown-menu-item:text-foreground" aria-hidden="true" />
+                <span className="font-medium text-foreground">Profile</span>
                 <DropdownMenuShortcut>
                   <ChevronRight className="h-3.5 w-3.5 opacity-50" aria-hidden="true" />
                 </DropdownMenuShortcut>
@@ -197,17 +197,17 @@ export function Header() {
               <DropdownMenuItem 
                 onClick={() => router.push("/settings")} 
                 className={cn(
-                  "px-3 py-2 cursor-pointer text-popover-foreground hover:bg-muted hover:text-popover-foreground",
-                  pathname.startsWith("/settings") && "bg-muted font-medium text-popover-foreground"
+                  "px-3 py-2 cursor-pointer text-foreground hover:bg-muted hover:text-foreground",
+                  pathname.startsWith("/settings") && "bg-muted font-medium text-foreground"
                 )}
               >
-                <Settings className="mr-3 h-4 w-4 shrink-0 text-muted-foreground group-hover/dropdown-menu-item:text-popover-foreground" aria-hidden="true" />
-                <span className="font-medium text-popover-foreground">Settings</span>
+                <Settings className="mr-3 h-4 w-4 shrink-0 text-foreground/75 group-hover/dropdown-menu-item:text-foreground" aria-hidden="true" />
+                <span className="font-medium text-foreground">Settings</span>
                 <DropdownMenuShortcut>
                   <ChevronRight className="h-3.5 w-3.5 opacity-50" aria-hidden="true" />
                 </DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="mx-2" />
+              <DropdownMenuSeparator className="mx-2 my-1" />
               <DropdownMenuItem
                 onClick={async () => {
                   await signOut()

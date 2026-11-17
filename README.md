@@ -15,7 +15,7 @@ PromptShield is an enterprise-grade AI security gateway and management platform 
 | **Enforce** | Guardrail Policies | Strictest-action-wins deterministic precedence engine with customizable risk thresholds and action overrides (`BLOCK`, `SANITIZE`, `WARN`, `ALLOW`). |
 | **Audit** | Immutable Audit Trail | Automatic, tamper-resistant audit logging for policy mutations, security decisions, unauthorized access attempts, and incident triaging. |
 | **Triage** | Incident Resolution | End-to-end incident management with status lifecycle tracking (`OPEN`, `INVESTIGATING`, `RESOLVED`, `FALSE_POSITIVE`) and sanitized resolution notes. |
-| **Diagnose** | Platform Telemetry | Continuous bounded liveness and readiness probes across Firestore, Upstash Redis, AI Gateway (Groq / OmniRoute), and the compiled rule engine. |
+| **Diagnose** | Platform Telemetry | Continuous bounded liveness and readiness probes across Firestore, Upstash Redis, Groq AI Engine, and the compiled rule engine. |
 | **Experience** | Awwwards & Impeccable UX | Smooth Lenis inertia scrolling synchronized with GSAP tickers, Cuberto magnetic follower cursor, top-edge kinetic scroll tracker, and Hallmark-verified anti-slop design. |
 
 ### Threat Coverage
@@ -45,8 +45,8 @@ PromptShield/
 │   │   │   │   ├── users/     # Multi-tenant RBAC access management
 │   │   │   │   └── system/    # Live platform telemetry and dependency health
 │   │   │   └── api/
-│   │   │       ├── ai/        # POST /api/ai (Secured inference proxy)
-│   │   │       ├── health/    # GET /api/health/omniroute
+│   │   │       ├── ai/        # POST /api/ai (Secured inference proxy via Groq)
+│   │   │       ├── health/    # GET /api/health/groq (and /api/health/omniroute)
 │   │   │       └── v1/
 │   │   │           ├── analyze/       # POST /api/v1/analyze (Security Engine)
 │   │   │           ├── policies/      # GET, POST, PUT, DELETE /api/v1/policies
@@ -72,7 +72,8 @@ PromptShield/
 │   │       ├── audit-logs.ts  # Client SDK & shared types for Audit Logs
 │   │       ├── incidents.ts   # Client SDK & shared types for Incidents
 │   │       ├── system-status.ts# Client SDK & shared types for System Diagnostics
-│   │       └── omniroute.ts   # AI Gateway integration (Groq / OmniRoute / OpenAI-compatible)
+│   │       ├── groq.ts        # Direct Groq AI Engine client (LPU inference & streaming)
+│   │       └── omniroute.ts   # Backward-compatibility alias for Groq AI engine
 │   └── package.json
 └── package.json               # Root workspace scripts
 ```
@@ -161,7 +162,7 @@ Reports process liveness and bounded dependency readiness probes (`≤ 3000ms` t
 
 ### 6. Inference Proxy API
 #### `POST /api/ai`
-Proxies validated prompts through the upstream AI gateway (Groq, OmniRoute, or OpenAI-compatible) only after prompt security checks and rate limits pass. Fails closed (`502`) if security event persistence fails. Supports full server-sent event (SSE) token streaming.
+Proxies validated prompts directly through the Groq AI Engine (`https://api.groq.com/openai/v1`) with ultra-fast LPU inference (`qwen/qwen3.8-27b`, `openai/gpt-oss-120b`) only after prompt security checks and rate limits pass. Fails closed (`502`) if security event persistence fails. Supports full server-sent event (SSE) token streaming.
 
 ---
 
@@ -189,7 +190,7 @@ Proxies validated prompts through the upstream AI gateway (Groq, OmniRoute, or O
 - [Node.js](https://nodejs.org/) 20+
 - A [Firebase](https://firebase.google.com/) project (with Firestore and Authentication enabled)
 - (Optional) [Upstash Redis](https://upstash.com/) for distributed rate limiting
-- [Groq](https://groq.com/) or an OpenAI-compatible gateway (OmniRoute, OpenRouter)
+- A [Groq](https://console.groq.com/keys) API Key
 
 ### 1. Clone & Configure
 ```bash
@@ -200,10 +201,10 @@ cp frontend/.env.example frontend/.env.local
 
 Populate `frontend/.env.local`:
 ```env
-# AI Gateway Configuration (Groq / OmniRoute)
-OMNIROUTE_BASE_URL=https://api.groq.com/openai/v1
-OMNIROUTE_API_KEY=gsk_your_groq_api_key
-OMNIROUTE_MODEL=qwen/qwen3.8-27b
+# Groq AI Engine Configuration
+GROQ_BASE_URL=https://api.groq.com/openai/v1
+GROQ_API_KEY=gsk_your_groq_api_key
+GROQ_MODEL=qwen/qwen3.8-27b
 
 # Firebase Public Configuration
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
@@ -261,7 +262,7 @@ npm run build
 | Graphics & Charts | Three.js, Recharts, Lucide Icons |
 | Backend & Auth | Firebase Admin SDK, Firebase Auth, Cloud Firestore |
 | Rate Limiting | Upstash Redis & `@upstash/ratelimit` |
-| AI Inference Engine | [Groq](https://groq.com/) / OmniRoute / OpenAI-compatible |
+| AI Inference Engine | [Groq](https://groq.com/) (Ultra-fast LPU inference) |
 
 ---
 

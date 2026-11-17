@@ -1,5 +1,5 @@
 import { adminDb } from "@/lib/firebase-admin";
-import { checkOmniRouteHealth } from "@/lib/omniroute";
+import { checkGroqHealth } from "@/lib/groq";
 import { analyzePromptServer } from "@/lib/server/security-engine";
 import { DETECTION_RULES } from "@/lib/server/rules/rule-definitions";
 import type {
@@ -20,17 +20,20 @@ type HealthChecker = () => Promise<DependencyStatus>;
 let firestoreCheckerOverride: HealthChecker | null = null;
 let redisCheckerOverride: HealthChecker | null = null;
 let omniRouteCheckerOverride: HealthChecker | null = null;
+let groqCheckerOverride: HealthChecker | null = null;
 let securityEngineCheckerOverride: HealthChecker | null = null;
 
 export function setSystemHealthOverridesForTest(overrides: {
   firestore?: HealthChecker | null;
   redis?: HealthChecker | null;
   omniRoute?: HealthChecker | null;
+  groq?: HealthChecker | null;
   securityEngine?: HealthChecker | null;
 }) {
   if (overrides.firestore !== undefined) firestoreCheckerOverride = overrides.firestore;
   if (overrides.redis !== undefined) redisCheckerOverride = overrides.redis;
   if (overrides.omniRoute !== undefined) omniRouteCheckerOverride = overrides.omniRoute;
+  if (overrides.groq !== undefined) groqCheckerOverride = overrides.groq;
   if (overrides.securityEngine !== undefined) securityEngineCheckerOverride = overrides.securityEngine;
   cachedStatus = null;
   lastCheckTime = 0;
@@ -154,7 +157,8 @@ async function checkRedisHealth(): Promise<DependencyStatus> {
   }
 }
 
-async function checkOmniRouteDependency(): Promise<DependencyStatus> {
+async function checkGroqDependency(): Promise<DependencyStatus> {
+  if (groqCheckerOverride) return groqCheckerOverride();
   if (omniRouteCheckerOverride) return omniRouteCheckerOverride();
 
   const start = performance.now();
@@ -162,16 +166,16 @@ async function checkOmniRouteDependency(): Promise<DependencyStatus> {
 
   try {
     const health = await withTimeout(
-      checkOmniRouteHealth(),
+      checkGroqHealth(),
       CHECK_TIMEOUT_MS,
-      "OmniRoute"
+      "Groq"
     );
 
     const latencyMs = Math.round(performance.now() - start);
 
     if (health.ok) {
       return {
-        name: "OmniRoute AI Gateway",
+        name: "Groq AI Engine",
         category: "gateway",
         status: "healthy",
         required: false,
@@ -187,13 +191,13 @@ async function checkOmniRouteDependency(): Promise<DependencyStatus> {
 
     const isUnconfigured = health.status === "unconfigured";
     return {
-      name: "OmniRoute AI Gateway",
+      name: "Groq AI Engine",
       category: "gateway",
       status: "degraded",
       required: false,
       message: isUnconfigured
-        ? "OmniRoute API key not configured on server."
-        : health.message || "OmniRoute gateway is currently degraded.",
+        ? "Groq API key not configured on server."
+        : health.message || "Groq AI service is currently degraded.",
       latencyMs,
       lastChecked: now,
       details: {
@@ -206,18 +210,21 @@ async function checkOmniRouteDependency(): Promise<DependencyStatus> {
     const isTimeout = rawMsg.includes("timed out");
 
     return {
-      name: "OmniRoute AI Gateway",
+      name: "Groq AI Engine",
       category: "gateway",
       status: "degraded",
       required: false,
       message: isTimeout
-        ? "OmniRoute health check timed out."
-        : "OmniRoute gateway connection failed.",
+        ? "Groq health check timed out."
+        : "Groq AI connection failed.",
       latencyMs,
       lastChecked: now,
     };
   }
 }
+
+// Backward-compatibility alias
+const checkOmniRouteDependency = checkGroqDependency;
 
 async function checkSecurityEngineHealth(): Promise<DependencyStatus> {
   if (securityEngineCheckerOverride) return securityEngineCheckerOverride();

@@ -8,7 +8,7 @@ import {
   motion,
   useReducedMotion,
 } from "framer-motion";
-import { ArrowRight, Menu, Moon, Sun, X, LogOut, User, Settings, ChevronDown } from "lucide-react";
+import { ArrowRight, Menu, Moon, Sun, X, LogOut, User, Settings, ChevronDown, LayoutDashboard } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 
@@ -55,12 +55,17 @@ export interface NavigationMenuProps {
 
 function ThemeToggle({ onLightSection }: { onLightSection?: boolean }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const mounted = React.useSyncExternalStore(
-    React.useCallback(() => () => {}, []),
-    React.useCallback(() => true, []),
-    React.useCallback(() => false, []),
-  );
-  const isDark = mounted ? resolvedTheme === "dark" : false;
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted
+    ? resolvedTheme === "dark"
+    : typeof document !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : false;
 
   return (
     <button
@@ -78,7 +83,7 @@ function ThemeToggle({ onLightSection }: { onLightSection?: boolean }) {
     >
       <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-[7px]" aria-hidden="true">
         <Sun className={cn("h-3.5 w-3.5 shrink-0 transition-colors duration-200", isDark ? "text-white/40" : "text-amber-500 fill-amber-500/20")} />
-        <Moon className={cn("h-3.5 w-3.5 shrink-0 transition-colors duration-200", isDark ? "text-indigo-400 fill-indigo-400/20" : "text-muted-foreground/50")} />
+        <Moon className={cn("h-3.5 w-3.5 shrink-0 transition-colors duration-200", isDark ? "text-indigo-400 fill-indigo-400/20" : "text-muted-foreground/60")} />
       </span>
       <span
         aria-hidden="true"
@@ -207,12 +212,17 @@ export function NavigationMenu({
   }, []);
 
   const { resolvedTheme } = useTheme();
-  const mounted = React.useSyncExternalStore(
-    React.useCallback(() => () => {}, []),
-    React.useCallback(() => true, []),
-    React.useCallback(() => false, []),
-  );
-  const isDark = mounted ? resolvedTheme === "dark" : false;
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted
+    ? resolvedTheme === "dark"
+    : typeof document !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : false;
   const indicatorLabel = hovered ?? null;
   const onLightSection = !isDark;
 
@@ -356,26 +366,30 @@ export function NavigationMenu({
                     </button>
                   }
                 />
-                <DropdownMenuContent align="end" className="w-64 border border-border bg-popover text-popover-foreground shadow-2xl">
-                  <div className="px-3.5 py-2.5 border-b border-border bg-surface-subtle">
-                    <p className="truncate text-sm font-semibold text-popover-foreground">{displayName}</p>
-                    <p className="truncate text-xs text-muted-foreground">{email || "—"}</p>
+                <DropdownMenuContent align="end" className="w-64 border border-border bg-popover text-popover-foreground shadow-2xl p-1.5">
+                  <div className="px-3.5 py-2.5 mb-1 rounded-lg border-b border-border/80 bg-surface-subtle/80">
+                    <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+                    <p className="truncate text-xs text-muted-foreground font-normal">{email || "—"}</p>
                   </div>
-                  <DropdownMenuItem onClick={() => { router.push("/dashboard"); setProfileMenuOpen(false); }} className="cursor-pointer text-popover-foreground hover:bg-muted hover:text-popover-foreground">
-                    <User className="mr-2 h-4 w-4 shrink-0 text-muted-foreground group-hover/dropdown-menu-item:text-popover-foreground" aria-hidden="true" />
-                    <span className="font-medium text-popover-foreground">Dashboard</span>
+                  <DropdownMenuItem onClick={() => { router.push("/dashboard"); setProfileMenuOpen(false); }} className="cursor-pointer text-foreground hover:bg-muted hover:text-foreground">
+                    <LayoutDashboard className="mr-2.5 h-4 w-4 shrink-0 text-foreground/75 group-hover/dropdown-menu-item:text-foreground" aria-hidden="true" />
+                    <span className="font-medium text-foreground">Dashboard</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { router.push("/settings"); setProfileMenuOpen(false); }} className="cursor-pointer text-popover-foreground hover:bg-muted hover:text-popover-foreground">
-                    <Settings className="mr-2 h-4 w-4 shrink-0 text-muted-foreground group-hover/dropdown-menu-item:text-popover-foreground" aria-hidden="true" />
-                    <span className="font-medium text-popover-foreground">Settings</span>
+                  <DropdownMenuItem onClick={() => { router.push("/profile"); setProfileMenuOpen(false); }} className="cursor-pointer text-foreground hover:bg-muted hover:text-foreground">
+                    <User className="mr-2.5 h-4 w-4 shrink-0 text-foreground/75 group-hover/dropdown-menu-item:text-foreground" aria-hidden="true" />
+                    <span className="font-medium text-foreground">Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => { router.push("/settings"); setProfileMenuOpen(false); }} className="cursor-pointer text-foreground hover:bg-muted hover:text-foreground">
+                    <Settings className="mr-2.5 h-4 w-4 shrink-0 text-foreground/75 group-hover/dropdown-menu-item:text-foreground" aria-hidden="true" />
+                    <span className="font-medium text-foreground">Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1" />
                   <DropdownMenuItem
                     onClick={handleSignOut}
                     variant="destructive"
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
-                    <LogOut className="mr-2 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+                    <LogOut className="mr-2.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
                     <span className="font-medium text-destructive">Sign out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -526,8 +540,16 @@ export function NavigationMenu({
                         onClick={() => setOpen(false)}
                         className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-page"
                       >
-                        <User className="h-4 w-4" aria-hidden="true" />
+                        <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
                         Dashboard
+                      </Link>
+                      <Link
+                        href="/profile"
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 text-sm font-medium text-foreground transition-colors duration-200 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-page"
+                      >
+                        <User className="h-4 w-4" aria-hidden="true" />
+                        Profile
                       </Link>
                       <Link
                         href="/settings"
