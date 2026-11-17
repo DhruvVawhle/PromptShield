@@ -2,7 +2,7 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
-const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'test-project';
 if (!projectId) {
   throw new Error("NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set.");
 }

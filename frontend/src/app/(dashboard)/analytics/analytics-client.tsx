@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { 
-  Activity, ShieldAlert, BarChart3, ShieldBan, RefreshCw, ChevronRight, 
-  Search, Info 
+  Activity, ShieldAlert, BarChart3, ShieldBan, RefreshCw, ChevronRight 
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Panel } from "@/components/ui/panel";
@@ -19,7 +18,7 @@ import {
   type SecurityEventWithId,
 } from "@/lib/security-events";
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from "recharts";
 import Link from "next/link";
@@ -70,12 +69,16 @@ export function AnalyticsClient() {
   React.useEffect(() => {
     if (authLoading) return;
     if (!user?.uid) {
-      setEvents([]);
-      setLoading(false);
+      React.startTransition(() => {
+        setEvents([]);
+        setLoading(false);
+      });
       return;
     }
 
-    setLoading(true);
+    React.startTransition(() => {
+      setLoading(true);
+    });
     let cancelled = false;
 
     const { start, end } = getPeriodDateRange(period);
@@ -105,7 +108,9 @@ export function AnalyticsClient() {
 
   const handleRefresh = () => {
     // Just toggle loading to give visual feedback, subscribeSecurityEvents handles live updates
-    setLoading(true);
+    React.startTransition(() => {
+      setLoading(true);
+    });
     setTimeout(() => setLoading(false), 500);
   };
 
@@ -191,56 +196,56 @@ export function AnalyticsClient() {
 
       {/* Summary metric cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover-lift">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-muted-foreground">
               <div className="p-1.5 rounded-md bg-primary/10 text-primary">
                 <Activity className="h-4 w-4" />
               </div>
-              <span className="text-xs font-medium uppercase tracking-wider">Total Analyzed</span>
+              <span className="text-xs font-medium text-muted-foreground">Total analyzed</span>
             </div>
           </div>
-          <span className="text-3xl font-bold text-foreground">{loading ? "..." : stats.totalAnalyzed.toLocaleString()}</span>
+          <span className="text-3xl font-bold text-foreground tabular-nums">{loading ? "..." : stats.totalAnalyzed.toLocaleString()}</span>
         </Panel>
 
-        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover-lift">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-muted-foreground">
               <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-500">
                 <ShieldAlert className="h-4 w-4" />
               </div>
-              <span className="text-xs font-medium uppercase tracking-wider">Threats Detected</span>
+              <span className="text-xs font-medium text-muted-foreground">Threats detected</span>
             </div>
           </div>
-          <span className="text-3xl font-bold text-foreground">{loading ? "..." : stats.threatsDetected.toLocaleString()}</span>
+          <span className="text-3xl font-bold text-foreground tabular-nums">{loading ? "..." : stats.threatsDetected.toLocaleString()}</span>
         </Panel>
 
-        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover-lift">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-muted-foreground">
               <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500">
                 <BarChart3 className="h-4 w-4" />
               </div>
-              <span className="text-xs font-medium uppercase tracking-wider">Avg Risk Score</span>
+              <span className="text-xs font-medium text-muted-foreground">Avg risk score</span>
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-foreground">{loading ? "..." : stats.avgRiskScore}</span>
+            <span className="text-3xl font-bold text-foreground tabular-nums">{loading ? "..." : stats.avgRiskScore}</span>
             <span className="text-sm text-muted-foreground font-medium">/ 100</span>
           </div>
         </Panel>
 
-        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover-lift">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-muted-foreground">
               <div className="p-1.5 rounded-md bg-destructive/10 text-destructive">
                 <ShieldBan className="h-4 w-4" />
               </div>
-              <span className="text-xs font-medium uppercase tracking-wider">Block Rate</span>
+              <span className="text-xs font-medium text-muted-foreground">Block rate</span>
             </div>
           </div>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-foreground">{loading ? "..." : blockRate}</span>
+            <span className="text-3xl font-bold text-foreground tabular-nums">{loading ? "..." : blockRate}</span>
             <span className="text-xl font-bold text-muted-foreground">%</span>
           </div>
         </Panel>

@@ -253,7 +253,7 @@ export function ProfileClient() {
             </div>
             <div className="p-5 flex flex-col gap-4">
               <div className="space-y-1">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">User UID</span>
+                <span className="text-xs font-medium text-muted-foreground">User UID</span>
                 <div className="flex items-center justify-between bg-muted/40 border border-border rounded-md px-3 py-1.5">
                   <code className="text-xs font-mono text-foreground truncate mr-3">{user.uid}</code>
                   <button 

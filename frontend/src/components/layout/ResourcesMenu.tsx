@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronDown, ExternalLink } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
   resourcesGroups,
   resourcesFeaturedLink,
@@ -348,7 +349,7 @@ const productFeaturedContent = (
   </>
 );
 
-export function ProductMenu() {
+export function ProductMenu({ onLightSection }: { onLightSection?: boolean } = {}) {
   const reducedMotion = useReducedMotionPref();
   const {
     open,
@@ -373,7 +374,7 @@ export function ProductMenu() {
       <button
         ref={triggerRef}
         type="button"
-        className="resources-trigger"
+        className={cn("resources-trigger", onLightSection && "resources-trigger--light")}
         aria-expanded={open}
         aria-controls="product-panel"
         onClick={handleTriggerClick}
@@ -426,7 +427,7 @@ const resourcesFeaturedContent = (
   </div>
 );
 
-export function ResourcesMenu() {
+export function ResourcesMenu({ onLightSection }: { onLightSection?: boolean } = {}) {
   const reducedMotion = useReducedMotionPref();
   const {
     open,
@@ -451,7 +452,7 @@ export function ResourcesMenu() {
       <button
         ref={triggerRef}
         type="button"
-        className="resources-trigger"
+        className={cn("resources-trigger", onLightSection && "resources-trigger--light")}
         aria-expanded={open}
         aria-controls="resources-panel"
         onClick={handleTriggerClick}

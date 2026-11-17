@@ -12,10 +12,7 @@ export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
       <article className="rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8 lg:p-10">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          PromptShield
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-foreground sm:text-4xl">
+        <h1 className="text-3xl font-semibold tracking-[-0.06em] text-foreground sm:text-4xl">
           Privacy Policy
         </h1>
 

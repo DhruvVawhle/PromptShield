@@ -226,41 +226,41 @@ export function IncidentsClient() {
 
       {/* Summary metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover-lift">
           <div className="flex items-center gap-2 text-muted-foreground">
             <div className="p-1.5 rounded-md bg-primary/10 text-primary">
               <AlertTriangle className="h-4 w-4" />
             </div>
             <span className="text-xs font-medium">Total Events</span>
           </div>
-          <span className="text-3xl font-bold text-foreground">{loading ? "..." : totalIncidents}</span>
+          <span className="text-3xl font-bold text-foreground tabular-nums">{loading ? "..." : totalIncidents}</span>
         </Panel>
-        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover-lift">
           <div className="flex items-center gap-2 text-destructive">
             <div className="p-1.5 rounded-md bg-destructive/10 text-destructive">
               <ShieldAlert className="h-4 w-4" />
             </div>
             <span className="text-xs font-medium">High+ Severity</span>
           </div>
-          <span className="text-3xl font-bold text-foreground">{loading ? "..." : highSeverityCount}</span>
+          <span className="text-3xl font-bold text-foreground tabular-nums">{loading ? "..." : highSeverityCount}</span>
         </Panel>
-        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover-lift">
           <div className="flex items-center gap-2 text-amber-500">
             <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-500">
               <Ban className="h-4 w-4" />
             </div>
             <span className="text-xs font-medium">Blocked</span>
           </div>
-          <span className="text-3xl font-bold text-foreground">{loading ? "..." : blockedCount}</span>
+          <span className="text-3xl font-bold text-foreground tabular-nums">{loading ? "..." : blockedCount}</span>
         </Panel>
-        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover:shadow-md transition-shadow">
+        <Panel className="p-5 flex flex-col gap-3 border-primary/10 shadow-sm bg-card hover-lift">
           <div className="flex items-center gap-2 text-blue-500">
             <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500">
               <Clock className="h-4 w-4" />
             </div>
             <span className="text-xs font-medium">Under Review</span>
           </div>
-          <span className="text-3xl font-bold text-foreground">{loading ? "..." : underReviewCount}</span>
+          <span className="text-3xl font-bold text-foreground tabular-nums">{loading ? "..." : underReviewCount}</span>
         </Panel>
       </div>
 
@@ -434,19 +434,19 @@ export function IncidentsClient() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-6 bg-muted/30 p-4 rounded-xl border border-border">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Severity</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Severity</p>
                   <StatusBadge tone={getSeverityTone(getSeverity(selectedEvent.riskScore))} label={getSeverity(selectedEvent.riskScore)} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Decision</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Decision</p>
                   <StatusBadge tone={getDecisionTone(selectedEvent.decision)} label={selectedEvent.decision} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Risk Score</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Risk score</p>
                   <p className="text-sm font-semibold">{selectedEvent.riskScore} / 100</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Category</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Category</p>
                   <p className="text-sm font-semibold">{selectedEvent.threatCategory || "Uncategorized"}</p>
                 </div>
               </div>

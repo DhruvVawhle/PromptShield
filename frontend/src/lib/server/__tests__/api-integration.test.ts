@@ -373,8 +373,12 @@ describe("Phase 4 Security Rules Verification - firestore.rules", () => {
     const fs = await import("fs");
     const path = await import("path");
     
-    // Look up firestore.rules from repo root
-    const rulesPath = path.resolve(process.cwd(), "firestore.rules");
+    // Look up firestore.rules from repo root or frontend parent
+    const possiblePaths = [
+      path.resolve(process.cwd(), "firestore.rules"),
+      path.resolve(process.cwd(), "..", "firestore.rules"),
+    ];
+    const rulesPath = possiblePaths.find((p) => fs.existsSync(p)) || possiblePaths[0];
     const content = fs.readFileSync(rulesPath, "utf-8");
 
     // 1. match /security_events/{eventId} must specify allow write: if false;

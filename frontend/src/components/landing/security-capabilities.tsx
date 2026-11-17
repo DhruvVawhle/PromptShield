@@ -130,7 +130,6 @@ export function SecurityCapabilities() {
       <div className="mx-auto box-border w-full max-w-[1120px] px-4 py-12 min-[860px]:px-6 min-[860px]:py-20">
         <div className="grid min-w-0 items-center gap-8 min-[860px]:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] min-[860px]:gap-12">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Capabilities</p>
             <SplitTextReveal
               as="h2"
               type="words"
@@ -139,7 +138,7 @@ export function SecurityCapabilities() {
               duration={1}
               stagger={0.06}
               y={40}
-              className="mt-4 text-3xl font-semibold tracking-[-0.05em] text-foreground sm:text-4xl lg:text-[2.9rem] lg:leading-[1.04]"
+              className="text-3xl font-semibold tracking-[-0.05em] text-foreground sm:text-4xl lg:text-[2.9rem] lg:leading-[1.04]"
             >
               Defense built for modern AI applications.
             </SplitTextReveal>
@@ -157,7 +156,7 @@ export function SecurityCapabilities() {
                     <div className="min-w-0">
                       <h3 className="text-lg font-semibold tracking-[-0.02em] text-foreground">{capability.title}</h3>
                       <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{capability.description}</p>
-                      <span className="mt-2.5 inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      <span className="mt-2.5 inline-flex rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                         {capability.tag}
                       </span>
                     </div>

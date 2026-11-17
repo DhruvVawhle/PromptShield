@@ -3,16 +3,19 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Search, AlertTriangle, Shield, BarChart3, MessageSquare, Settings, ShieldCheck } from "lucide-react"
+import { LayoutDashboard, Search, AlertTriangle, Shield, BarChart3, MessageSquare, Settings, ShieldCheck, History, Activity, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const nav = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Analyze", href: "/playground", icon: Search, activeMatch: "/playground" },
+  { name: "Analyze", href: "/playground", icon: Search },
   { name: "Threats", href: "/incidents", icon: AlertTriangle },
   { name: "Policies", href: "/policies", icon: Shield },
+  { name: "Audit Logs", href: "/audit-logs", icon: History },
+  { name: "System", href: "/system", icon: Activity },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "AI Chat", href: "/chat", icon: MessageSquare },
+  { name: "Team & Access", href: "/users", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ]
 
@@ -41,13 +44,13 @@ export function Sidebar() {
                   href={item.href}
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                    "group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150",
                     isActive
-                      ? "bg-[var(--severity-medium-bg)] text-[var(--severity-medium-text)] border border-[var(--severity-medium-border)]"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent",
+                      ? "bg-[var(--severity-medium-bg)] text-[var(--severity-medium-text)] border border-[var(--severity-medium-border)] shadow-xs font-semibold"
+                      : "text-muted-foreground hover:bg-surface-subtle hover:text-foreground border border-transparent hover:translate-x-0.5",
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <Icon className="h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-105" aria-hidden="true" />
                   {item.name}
                 </Link>
               </li>
@@ -57,13 +60,13 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-border px-3 py-4">
-        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-subtle px-3 py-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-background">
+        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-subtle px-3 py-2.5 shadow-2xs">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary border border-primary/20 shadow-2xs">
             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
           </span>
           <span className="min-w-0">
             <span className="block text-xs font-semibold leading-none text-foreground">Security Engineer</span>
-            <span className="block text-[11px] leading-none text-muted-foreground">AI Security Platform</span>
+            <span className="block mt-1 text-[11px] leading-none text-muted-foreground">AI Security Platform</span>
           </span>
         </div>
       </div>

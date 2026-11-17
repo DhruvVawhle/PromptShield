@@ -170,8 +170,7 @@ export function WorkflowSection() {
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Workflow</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-foreground sm:text-4xl">
+          <h2 className="text-3xl font-semibold tracking-[-0.05em] text-foreground sm:text-4xl">
             Every prompt. Analyzed before execution.
           </h2>
         </div>
@@ -180,7 +179,7 @@ export function WorkflowSection() {
           <div className="mx-auto max-w-2xl space-y-7 pt-10">
             {STEPS.map((s) => (
               <div key={s.id} className="workflow-mobile-item">
-                <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground">{s.id}</p>
+                <p className="font-mono text-xs font-medium text-muted-foreground">{s.id}</p>
                 <h3 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-foreground">{s.title}</h3>
                 <p className="mt-2 text-[15px] leading-7 text-[#465266]">{s.description}</p>
                 <div className="mt-4">{s.artifact}</div>

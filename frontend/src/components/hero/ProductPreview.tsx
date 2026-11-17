@@ -458,8 +458,8 @@ export function ProductPreview({ reducedMotion }: { reducedMotion: boolean }) {
           <div className="pointer-events-none absolute inset-0 opacity-[0.45]" style={{ background: "radial-gradient(520px 220px at var(--sx, 55%) var(--sy, 28%), rgba(255,255,255,0.65), transparent 62%)" }} aria-hidden="true" />
           <div className="flex sm:hidden flex-col">
             <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-900">PROMPTSHIELD</span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-600">Preview</span>
+              <span className="text-xs font-semibold text-slate-900">PROMPTSHIELD</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">Preview</span>
             </div>
             <div className="flex gap-1 overflow-x-auto border-b border-slate-100 bg-slate-50/60 px-2 py-2 scrollbar-none">
               {NAV.map((n) => (
@@ -482,7 +482,7 @@ export function ProductPreview({ reducedMotion }: { reducedMotion: boolean }) {
           <div className="hidden sm:flex min-h-[560px] lg:min-h-[600px]">
             <aside className={cn("flex flex-col border-r border-slate-200 bg-[#fafafb] transition-all duration-300", sidebarCollapsed ? "w-[56px]" : "w-[176px]")} aria-label="Product navigation">
               <div className="flex h-[56px] items-center justify-between border-b border-slate-200 px-3">
-                {!sidebarCollapsed && <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-900">PROMPTSHIELD</span>}
+                {!sidebarCollapsed && <span className="text-xs font-semibold text-slate-900">PROMPTSHIELD</span>}
                 <button type="button" onClick={() => setSidebarCollapsed((v) => !v)} aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!sidebarCollapsed} className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:text-slate-900 hover:bg-slate-50">
                   {sidebarCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
                 </button>
@@ -511,7 +511,7 @@ export function ProductPreview({ reducedMotion }: { reducedMotion: boolean }) {
             </aside>
             <div className="flex min-w-0 flex-1 flex-col bg-white">
               <header className="flex h-[56px] shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4">
-                <div className="flex items-center gap-2"><span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-900">PROMPTSHIELD</span><span className="h-3 w-px bg-slate-200" aria-hidden="true" /><span className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">Preview</span></div>
+                <div className="flex items-center gap-2"><span className="text-xs font-semibold text-slate-900">PROMPTSHIELD</span><span className="h-3 w-px bg-slate-200" aria-hidden="true" /><span className="text-xs font-normal text-slate-500">Preview</span></div>
                 <span className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-500"><UserCircle className="h-4 w-4" aria-hidden="true" /></span>
               </header>
               <div className="flex-1 overflow-auto p-4 lg:p-5 chat-scroll">
@@ -531,7 +531,7 @@ export function ProductPreview({ reducedMotion }: { reducedMotion: boolean }) {
         </div>
       </div>
       <div className="sm:hidden mt-6 rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm" aria-hidden="true">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500"><Shield className="h-3.5 w-3.5" /> Floating preview hidden on mobile for readability</div>
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Shield className="h-3.5 w-3.5" /> Floating preview hidden on mobile for readability</div>
       </div>
     </div>
   );

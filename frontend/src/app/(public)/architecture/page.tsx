@@ -21,10 +21,7 @@ export default function ArchitecturePage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="rounded-[28px] border border-border bg-surface p-6 shadow-sm sm:p-8 lg:p-10">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          Architecture
-        </p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-[-0.06em] text-foreground sm:text-5xl">
+        <h1 className="text-3xl font-semibold tracking-[-0.06em] text-foreground sm:text-5xl">
           A security gateway that keeps AI execution transparent.
         </h1>
 

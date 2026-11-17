@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { siteConfig } from "@/lib/site";
 import { LenisProvider } from "@/components/LenisProvider";
+import { CubertoCursor } from "@/components/ui/cuberto-cursor";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import "./globals.css";
 
@@ -66,6 +67,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <LenisProvider>
+              <CubertoCursor />
               <TooltipProvider>{children}</TooltipProvider>
             </LenisProvider>
           </AuthProvider>

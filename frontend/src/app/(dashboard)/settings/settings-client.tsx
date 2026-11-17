@@ -211,12 +211,12 @@ export function SettingsClient({
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-sm text-foreground">OmniRoute Gateway</h3>
                       {omniRouteConfigured ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-status-allow/10 px-2 py-0.5 text-[10px] font-medium text-status-allow uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-status-allow/10 px-2 py-0.5 text-xs font-medium text-status-allow">
                           <CheckCircle2 className="h-3 w-3" /> Configured
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-status-block/10 px-2 py-0.5 text-[10px] font-medium text-status-block uppercase tracking-wider">
-                          <AlertCircle className="h-3 w-3" /> Not Configured
+                        <span className="inline-flex items-center gap-1 rounded-full bg-status-block/10 px-2 py-0.5 text-xs font-medium text-status-block">
+                          <AlertCircle className="h-3 w-3" /> Not configured
                         </span>
                       )}
                     </div>

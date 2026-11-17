@@ -87,7 +87,7 @@ export function KpiCard({
         className
       )}
     >
-      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <div className="mt-2 flex items-baseline gap-2">
         <p className="text-2xl font-semibold tracking-tight text-foreground tabular-nums" data-kpi-value>
           {value}
@@ -357,7 +357,7 @@ export function DonutBreakdown({
       {centerLabel ? (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-lg font-semibold text-foreground tabular-nums">{total}</span>
-          <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             {centerLabel}
           </span>
         </div>

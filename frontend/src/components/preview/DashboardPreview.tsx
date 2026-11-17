@@ -166,8 +166,7 @@ export function DashboardPreview() {
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Preview</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-foreground sm:text-4xl">
+          <h2 className="text-3xl font-semibold tracking-[-0.05em] text-foreground sm:text-4xl">
             A glimpse of the PromptShield security experience.
           </h2>
         </div>
@@ -219,7 +218,7 @@ export function DashboardPreview() {
 
             <div ref={kpiRowRef} className="mt-6 grid gap-4 md:grid-cols-3">
               <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Threats detected</p>
+                <p className="text-xs font-medium text-muted-foreground">Threats detected</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <p className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">
                     <span data-kpi-count data-final={String(threatsDetected)}>
@@ -243,7 +242,7 @@ export function DashboardPreview() {
               </div>
 
               <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Risk score</p>
+                <p className="text-xs font-medium text-muted-foreground">Risk score</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <p className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">
                     <span data-kpi-count data-final={String(riskNow)}>
@@ -268,7 +267,7 @@ export function DashboardPreview() {
               </div>
 
               <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Decision trend</p>
+                <p className="text-xs font-medium text-muted-foreground">Decision trend</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <p className="text-2xl font-semibold tracking-tight text-foreground">Monitor</p>
                 </div>
