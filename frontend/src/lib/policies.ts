@@ -97,10 +97,10 @@ export function subscribePolicies(
   onError?: (error: Error) => void
 ): Unsubscribe {
   const db = getFirebaseFirestore();
+  // Single-field where query avoids composite index requirement in Firestore
   const q = query(
     collection(db, POLICIES_COLLECTION),
-    where("uid", "==", uid),
-    orderBy("updatedAt", "desc")
+    where("uid", "==", uid)
   );
 
   return onSnapshot(
@@ -113,6 +113,12 @@ export function subscribePolicies(
             ...(d.data() as Omit<Policy, "updatedAt"> & { updatedAt: Timestamp }),
           } as PolicyWithId)
       );
+      // In-memory sort by updatedAt descending
+      policies.sort((a, b) => {
+        const timeA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : new Date(a.updatedAt || 0).getTime();
+        const timeB = b.updatedAt instanceof Timestamp ? b.updatedAt.toMillis() : new Date(b.updatedAt || 0).getTime();
+        return timeB - timeA;
+      });
       callback(policies);
     },
     (error) => {
