@@ -3,109 +3,103 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  Layers,
-  Cpu,
-  ShieldCheck,
-  Zap,
-  Server,
-  Database,
   ArrowRight,
-  Code2,
-  Terminal,
-  CheckCircle2,
-  Lock,
-  RefreshCw,
-  GitMerge,
-  Network,
-  Activity,
-  FileCheck,
-  ChevronRight,
+  Check,
   Copy,
 } from "lucide-react";
-import { FlowButton } from "@/components/ui/flow-button";
 import { cn } from "@/lib/utils";
 
-type PipelineStageKey = "ingress" | "normalize" | "heuristics" | "scoring" | "policy" | "dispatch";
+type PipelineStageKey =
+  | "ingress"
+  | "normalize"
+  | "heuristics"
+  | "scoring"
+  | "policy"
+  | "dispatch";
 
-const PIPELINE_STAGES: Record<
-  PipelineStageKey,
-  {
-    step: string;
-    title: string;
-    subtitle: string;
-    latency: string;
-    icon: typeof Network;
-    description: string;
-    inputs: string[];
-    outputs: string[];
-    technicalDetails: string;
-  }
-> = {
+interface StageSpec {
+  step: string;
+  title: string;
+  subtitle: string;
+  latency: string;
+  description: string;
+  inputs: string[];
+  outputs: string[];
+  technicalDetails: string;
+}
+
+const PIPELINE_STAGES: Record<PipelineStageKey, StageSpec> = {
   ingress: {
     step: "01",
-    title: "Client Ingress & Auth Guard",
-    subtitle: "Authentication & Rate Limiting",
+    title: "Client ingress and auth guard",
+    subtitle: "Authentication and rate limiting",
     latency: "1.2ms",
-    icon: Network,
-    description: "Intercepts incoming client requests via REST or OpenAI-compatible streaming endpoints. Validates Bearer tokens and checks tenant rate limits.",
-    inputs: ["HTTP POST /api/ai", "Bearer JWT / API Key", "Client IP & User-Agent"],
-    outputs: ["Verified Tenant ID", "Rate Limit Tokens Remaining", "Authorized Session Context"],
-    technicalDetails: "Powered by Upstash Redis sliding-window algorithms and Firebase Admin SDK token verification. Unauthorized or rate-limited requests fail fast before token consumption.",
+    description:
+      "Intercepts incoming client requests via REST or OpenAI-compatible streaming endpoints. Validates Bearer tokens and checks tenant rate limits.",
+    inputs: ["HTTP POST /api/ai", "Bearer JWT / API key", "Client IP and session metadata"],
+    outputs: ["Verified tenant ID", "Rate limit tokens remaining", "Authorized session context"],
+    technicalDetails:
+      "Powered by Upstash Redis sliding-window algorithms and Firebase Admin SDK token verification. Unauthorized or rate-limited requests fail fast before token consumption.",
   },
   normalize: {
     step: "02",
-    title: "Canonicalization & Decoding",
-    subtitle: "Input De-Obfuscation",
+    title: "Canonicalization and decoding",
+    subtitle: "Input de-obfuscation",
     latency: "0.8ms",
-    icon: RefreshCw,
-    description: "Strips evasion vectors: zero-width Unicode smuggling, homoglyph substitutions, URL percent-encoding, and Base64/Hex encoding wrappers.",
-    inputs: ["Raw String Payload", "Prompt Metadata"],
-    outputs: ["Standardized UTF-8 Text", "Resolved Delimiters", "De-obfuscated Characters"],
-    technicalDetails: "Executes deterministic zero-width space stripping (\\u200B, \\u200C, \\uFEFF), recursive URI unquoting, and base64 detection to prevent obfuscation bypasses.",
+    description:
+      "Strips evasion vectors: zero-width Unicode smuggling, homoglyph substitutions, URL percent-encoding, and Base64/Hex encoding wrappers.",
+    inputs: ["Raw string payload", "Prompt metadata"],
+    outputs: ["Standardized UTF-8 text", "Resolved delimiters", "De-obfuscated characters"],
+    technicalDetails:
+      "Executes deterministic zero-width space stripping (\\u200B, \\u200C, \\uFEFF), recursive URI unquoting, and base64 detection to prevent obfuscation bypasses.",
   },
   heuristics: {
     step: "03",
-    title: "Deterministic Heuristic Engine",
-    subtitle: "50+ Signature Pattern Matchers",
+    title: "Deterministic heuristic engine",
+    subtitle: "50+ signature pattern matchers",
     latency: "2.5ms",
-    icon: Cpu,
-    description: "Evaluates the canonical prompt against 50+ deterministic security rules for instruction overrides, jailbreak personas, canary tokens, and PII leaks.",
-    inputs: ["Canonicalized Text", "Active Rule Catalog"],
-    outputs: ["Matched Rule Violations", "Confidence Weightings", "Threat Categories"],
-    technicalDetails: "Runs compiled V8 regular expressions and multi-token boundary analyzers. Matches high-risk triggers (e.g. system prompt extraction, DAN personas, SQL injection).",
+    description:
+      "Evaluates the canonical prompt against 50+ deterministic security rules for instruction overrides, jailbreak personas, canary tokens, and PII leaks.",
+    inputs: ["Canonicalized text", "Active rule catalog"],
+    outputs: ["Matched rule violations", "Confidence weightings", "Threat categories"],
+    technicalDetails:
+      "Runs compiled V8 regular expressions and multi-token boundary analyzers. Matches high-risk triggers (e.g. system prompt extraction, DAN personas, SQL injection).",
   },
   scoring: {
     step: "04",
-    title: "Risk Aggregation & Scoring",
-    subtitle: "Normalized Risk Matrix [0, 100]",
+    title: "Risk aggregation and scoring",
+    subtitle: "Normalized risk matrix [0, 100]",
     latency: "1.4ms",
-    icon: Activity,
-    description: "Aggregates individual rule weights into a deterministic composite risk score strictly bounded between 0 and 100.",
-    inputs: ["Matched Rule List", "Threat Severities"],
-    outputs: ["Risk Score (0–100)", "Primary Threat Category", "Confidence Index"],
-    technicalDetails: "Uses non-linear severity weighting: Critical rules automatically anchor score >= 90; High >= 70; Medium >= 40. Guarantees predictable, auditable scoring without model hallucinations.",
+    description:
+      "Aggregates individual rule weights into a deterministic composite risk score strictly bounded between 0 and 100.",
+    inputs: ["Matched rule list", "Threat severities"],
+    outputs: ["Risk score (0–100)", "Primary threat category", "Confidence index"],
+    technicalDetails:
+      "Uses non-linear severity weighting: Critical rules automatically anchor score >= 90; High >= 70; Medium >= 40. Guarantees predictable, auditable scoring without model hallucinations.",
   },
   policy: {
     step: "05",
-    title: "Policy Precedence Resolver",
-    subtitle: "Strictest-Action-Wins Engine",
+    title: "Policy precedence resolver",
+    subtitle: "Strictest-action-wins engine",
     latency: "1.6ms",
-    icon: GitMerge,
-    description: "Applies tenant-configured guardrail policies. If rules or custom policy actions conflict, the engine enforces deterministic strictest-action-wins precedence.",
-    inputs: ["Composite Risk Score", "Tenant Policy Configuration"],
-    outputs: ["Final Decision (ALLOW / WARN / SANITIZE / BLOCK)", "Sanitized Payload (if viable)"],
-    technicalDetails: "Strict precedence hierarchy: BLOCK > SANITIZE > WARN > ALLOW. Mandatory security safeguards can never be overridden by loose custom policies.",
+    description:
+      "Applies tenant-configured guardrail policies. If rules or custom policy actions conflict, the engine enforces deterministic strictest-action-wins precedence.",
+    inputs: ["Composite risk score", "Tenant policy configuration"],
+    outputs: ["Final decision (ALLOW / WARN / SANITIZE / BLOCK)", "Sanitized payload (if viable)"],
+    technicalDetails:
+      "Strict precedence hierarchy: BLOCK > SANITIZE > WARN > ALLOW. Mandatory security safeguards can never be overridden by loose custom policies.",
   },
   dispatch: {
     step: "06",
-    title: "Enforcement & Provider Dispatch",
-    subtitle: "Upstream Insulation & Audit",
+    title: "Enforcement and provider dispatch",
+    subtitle: "Upstream insulation and audit",
     latency: "4.8ms",
-    icon: Server,
-    description: "Enforces the decision. On BLOCK, terminates with 403 immediately (LLM is NEVER contacted). On ALLOW/WARN, proxies request to upstream model and records audit logs.",
-    inputs: ["Enforced Decision", "Original / Sanitized Prompt"],
-    outputs: ["Model Response Stream", "Tamper-Proof Audit Record", "Security Event Telemetry"],
-    technicalDetails: "Zero-buffering Server-Sent Events (SSE) passthrough to upstream providers (Groq, OpenAI, Anthropic, Gemini, OmniRoute). Asynchronously records HMAC-signed audit logs in Firestore.",
+    description:
+      "Enforces the decision. On BLOCK, terminates with 403 immediately (LLM is never contacted). On ALLOW/WARN, proxies request to upstream model and records audit logs.",
+    inputs: ["Enforced decision", "Original / sanitized prompt"],
+    outputs: ["Model response stream", "Tamper-proof audit record", "Security event telemetry"],
+    technicalDetails:
+      "Zero-buffering Server-Sent Events (SSE) passthrough to upstream providers (Groq, OpenAI, Anthropic, Gemini, OmniRoute). Asynchronously records HMAC-signed audit logs in Firestore.",
   },
 };
 
@@ -114,7 +108,7 @@ const CODE_EXAMPLES = {
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  // Point your base URL to the PromptShield reverse proxy
+  // Point baseURL to the PromptShield reverse proxy
   baseURL: "https://api.promptshield.dev/v1",
   apiKey: process.env.PROMPTSHIELD_API_KEY,
 });
@@ -148,7 +142,7 @@ try:
     print("Response:", completion.choices[0].message.content)
 except Exception as e:
     # Captures X-Security-Decision and X-Security-Risk-Score
-    print("Security Policy Enforced:", e)`,
+    print("Security policy enforced:", e)`,
   curl: `# REST API / cURL — Direct Gateway Inspection
 curl -X POST "https://api.promptshield.dev/api/v1/analyze" \\
   -H "Authorization: Bearer YOUR_PROMPTSHIELD_KEY" \\
@@ -168,7 +162,8 @@ curl -X POST "https://api.promptshield.dev/api/v1/analyze" \\
 
 export function ArchitectureClient() {
   const [activeStage, setActiveStage] = React.useState<PipelineStageKey>("ingress");
-  const [activeCodeLang, setActiveCodeLang] = React.useState<"typescript" | "python" | "curl">("typescript");
+  const [activeCodeLang, setActiveCodeLang] =
+    React.useState<"typescript" | "python" | "curl">("typescript");
   const [copiedCode, setCopiedCode] = React.useState(false);
 
   const stageSpec = PIPELINE_STAGES[activeStage];
@@ -180,180 +175,213 @@ export function ArchitectureClient() {
   };
 
   return (
-    <div className="relative w-full overflow-hidden pb-24 pt-28">
-      {/* Background radial atmosphere */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[640px] opacity-25 dark:opacity-40 [background:radial-gradient(circle_at_top,_var(--primary)_0%,_transparent_70%)]"
-      />
-
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="w-full pb-24 pt-28">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* ========================================================================= */}
-        {/* 1. HERO SECTION */}
+        {/* 1. HERO SECTION (EDITORIAL, HONEST, RESTRAINED) */}
         {/* ========================================================================= */}
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface/80 px-3.5 py-1 text-xs font-semibold text-muted-foreground backdrop-blur-md shadow-xs">
-            <Layers className="h-3.5 w-3.5 text-primary" />
-            <span>High-Throughput Reverse Proxy · Model-Agnostic Edge</span>
-          </div>
-
-          <h1 className="mt-6 text-4xl font-semibold tracking-[-0.06em] text-foreground sm:text-5xl lg:text-6xl lg:leading-[1.05]">
-            Reverse-Proxy Security Architecture for AI at Scale
-          </h1>
-
-          <p className="mt-6 text-base leading-8 text-muted-foreground sm:text-lg">
-            PromptShield operates as an ultra-low-latency reverse proxy between client applications and large language model providers. It canonicalizes inputs, detects adversarial prompt vectors, enforces tenant policies, and records immutable audit trails with sub-15ms median overhead.
+        <header className="border-b border-border pb-16">
+          <p className="text-sm font-medium text-muted-foreground">
+            Architecture specification
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <FlowButton text="Deploy Gateway" href="/login" />
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-5xl sm:leading-[1.1]">
+            Reverse-proxy architecture for large language models
+          </h1>
+
+          <p className="mt-6 max-w-[65ch] text-base leading-relaxed text-muted-foreground sm:text-lg">
+            PromptShield operates as an inline reverse proxy between client applications and large language model providers. It terminates TLS, normalizes inputs, detects adversarial patterns, enforces tenant policies, and streams responses with sub-15ms median proxy overhead.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-lg bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
+            >
+              Deploy Gateway
+            </Link>
             <Link
               href="/security"
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-xs"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
-              <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-              <span>Explore Security Model</span>
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Review Security Model</span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
           </div>
-
-          {/* Architectural Pill Highlights */}
-          <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {[
-              {
-                title: "Zero Upstream Changes",
-                desc: "Compatible with OpenAI, Anthropic, Groq, and Gemini endpoints. Swap baseURL in 2 lines.",
-              },
-              {
-                title: "Sub-15ms Stream Passthrough",
-                desc: "Zero-buffering Server-Sent Events (SSE) streaming engine. Allowed requests start streaming instantly.",
-              },
-              {
-                title: "Deterministic Audit Ledger",
-                desc: "Immutable HMAC-verified security event recording in Firestore for comprehensive SOC2 compliance.",
-              },
-            ].map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-border bg-surface/90 p-5 text-left shadow-xs backdrop-blur-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                  <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
-                </div>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        </header>
 
         {/* ========================================================================= */}
-        {/* 2. INTERACTIVE 6-STAGE PIPELINE EXPLORER */}
+        {/* 2. END-TO-END SYSTEM TOPOLOGY */}
         {/* ========================================================================= */}
-        <section className="mt-28">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Execution Pipeline</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
-              6-Stage Request/Response Pipeline
+        <section className="border-b border-border py-16">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              System topology and request flow
             </h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Every request entering PromptShield passes through an optimized 6-stage security pipeline. Click any stage to inspect its data contract, execution latency, and technical implementation.
+            <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+              A transparent proxy architecture guarantees that unauthenticated requests, rate-limit violations, and adversarial payloads never consume model tokens.
             </p>
           </div>
 
-          {/* Pipeline Stage Step Buttons */}
-          <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-8 divide-y divide-border border-y border-border">
+            {[
+              {
+                tier: "Tier 1",
+                label: "Client Ingress",
+                desc: "Web apps, mobile frontends, and autonomous agent frameworks connect to the proxy via standard OpenAI-compatible endpoints or REST. Authentication is validated against tenant secrets and rate limits before prompt analysis begins.",
+                spec: "HTTP POST /api/ai · Bearer JWT / API Key · Upstash Redis sliding window",
+              },
+              {
+                tier: "Tier 2",
+                label: "PromptShield Gateway Core",
+                desc: "The proxy core executes deterministic zero-width space normalization, recursive URI decoding, and 50+ compiled regular expression scanners. It computes a bounded risk score and applies tenant policy precedence (BLOCK > SANITIZE > WARN > ALLOW).",
+                spec: "Pure V8 execution · Median 8–14ms latency · Zero external API dependencies",
+              },
+              {
+                tier: "Tier 3",
+                label: "Inference and Audit Plane",
+                desc: "Blocked requests are immediately terminated with HTTP 403 Forbidden without upstream network calls. Allowed and sanitized requests are proxied via Server-Sent Events to target LLM providers (Groq, OpenAI, Anthropic, Gemini). HMAC-verified audit logs are persisted asynchronously in Firestore.",
+                spec: "Zero-buffering SSE streaming · HMAC tamper-proof audit · Upstream tokens insulated",
+              },
+            ].map((layer) => (
+              <div key={layer.label} className="py-6 sm:grid sm:grid-cols-[140px_1fr] sm:gap-6">
+                <div>
+                  <span className="font-mono text-xs font-semibold text-foreground">
+                    {layer.tier}
+                  </span>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{layer.label}</p>
+                </div>
+                <div>
+                  <p className="text-sm leading-relaxed text-foreground">{layer.desc}</p>
+                  <p className="mt-2 font-mono text-xs text-muted-foreground">{layer.spec}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* 3. 6-STAGE REQUEST/RESPONSE PIPELINE */}
+        {/* ========================================================================= */}
+        <section className="border-b border-border py-16">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              6-stage request pipeline
+            </h2>
+            <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+              Every request entering PromptShield passes through an optimized 6-stage pipeline. Select a stage to inspect its data contract, execution latency, and technical implementation.
+            </p>
+          </div>
+
+          {/* Stage Tab Buttons */}
+          <div
+            className="mt-8 flex flex-wrap gap-2"
+            role="tablist"
+            aria-label="Pipeline stages"
+          >
             {(Object.keys(PIPELINE_STAGES) as PipelineStageKey[]).map((key) => {
               const stage = PIPELINE_STAGES[key];
-              const Icon = stage.icon;
               const isActive = activeStage === key;
               return (
                 <button
                   key={key}
                   type="button"
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => setActiveStage(key)}
                   className={cn(
-                    "flex flex-col rounded-2xl border p-4 text-left transition-all duration-200 shadow-xs",
+                    "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                     isActive
-                      ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
-                      : "border-border bg-surface hover:border-border/80 hover:bg-surface-subtle"
+                      ? "bg-foreground text-background"
+                      : "border border-border bg-surface text-muted-foreground hover:text-foreground hover:bg-surface-subtle"
                   )}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-muted-foreground">{stage.step}</span>
-                    <span className="rounded-md bg-surface-subtle border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                      {stage.latency}
-                    </span>
-                  </div>
-                  <Icon className={cn("mt-3 h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")} />
-                  <p className="mt-2 text-xs font-semibold text-foreground leading-snug line-clamp-2">{stage.title}</p>
+                  <span className="font-mono">{stage.step}</span>
+                  <span>{stage.title}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* Active Pipeline Stage Detail Card */}
-          <div className="mt-8 rounded-3xl border border-border bg-surface p-6 shadow-md sm:p-8">
+          {/* Stage Detail Box */}
+          <div className="mt-6 rounded-lg border border-border bg-surface p-6 sm:p-8">
             <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:items-start">
               <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <span className="rounded-xl bg-primary/10 px-3 py-1 font-mono text-xs font-bold text-primary">
-                    Stage {stageSpec.step}
+                <div className="flex items-center justify-between border-b border-border pb-4">
+                  <div>
+                    <span className="font-mono text-sm font-bold text-foreground">
+                      Stage {stageSpec.step}
+                    </span>
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      {stageSpec.subtitle}
+                    </span>
+                  </div>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    Latency: {stageSpec.latency}
                   </span>
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {stageSpec.subtitle}
-                  </span>
-                  <span className="ml-auto font-mono text-xs text-muted-foreground">Latency: {stageSpec.latency}</span>
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-bold tracking-tight text-foreground">{stageSpec.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{stageSpec.description}</p>
+                  <h3 className="text-base font-semibold text-foreground">
+                    {stageSpec.title}
+                  </h3>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {stageSpec.description}
+                  </p>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-surface-subtle p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-primary">Technical Specification</p>
-                  <p className="mt-2 text-xs leading-6 text-foreground font-mono">{stageSpec.technicalDetails}</p>
+                <div className="border-t border-border pt-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground">
+                    Technical implementation
+                  </h4>
+                  <p className="mt-1 font-mono text-xs leading-relaxed text-foreground">
+                    {stageSpec.technicalDetails}
+                  </p>
                 </div>
               </div>
 
-              {/* Data In/Out Contract Box */}
-              <div className="flex flex-col justify-between rounded-2xl border border-border bg-surface-subtle p-5 font-mono text-xs">
-                <div>
-                  <div className="border-b border-border pb-3">
-                    <p className="font-semibold text-foreground">Pipeline Data Contract</p>
-                    <p className="text-[11px] text-muted-foreground">Stage {stageSpec.step} Ingress &amp; Egress State</p>
+              {/* Data Contract Pane */}
+              <div className="border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+                <div className="border-b border-border pb-3">
+                  <span className="font-mono text-xs font-semibold text-foreground">
+                    data-contract.spec
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-4 font-mono text-xs">
+                  <div>
+                    <span className="text-[11px] font-semibold text-muted-foreground">
+                      Input parameters
+                    </span>
+                    <ul className="mt-1.5 space-y-1">
+                      {stageSpec.inputs.map((inp) => (
+                        <li key={inp} className="flex items-center gap-2 text-foreground">
+                          <span className="text-muted-foreground">→</span>
+                          <span>{inp}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
-                  <div className="mt-4 space-y-4">
-                    <div>
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Input Parameters</p>
-                      <ul className="mt-1.5 space-y-1">
-                        {stageSpec.inputs.map((inp) => (
-                          <li key={inp} className="flex items-center gap-2 text-foreground">
-                            <span className="text-primary font-bold">→</span>
-                            <span>{inp}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="border-t border-border pt-3">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Output Artifacts</p>
-                      <ul className="mt-1.5 space-y-1">
-                        {stageSpec.outputs.map((out) => (
-                          <li key={out} className="flex items-center gap-2 text-foreground">
-                            <span className="text-emerald-500 font-bold">✓</span>
-                            <span>{out}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  <div className="border-t border-border pt-3">
+                    <span className="text-[11px] font-semibold text-muted-foreground">
+                      Output artifacts
+                    </span>
+                    <ul className="mt-1.5 space-y-1">
+                      {stageSpec.outputs.map((out) => (
+                        <li key={out} className="flex items-center gap-2 text-foreground">
+                          <Check className="h-3 w-3 text-foreground" />
+                          <span>{out}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
 
-                <div className="mt-6 rounded-xl border border-border bg-surface p-3 text-[11px] text-muted-foreground">
-                  <span className="font-semibold text-foreground">Deterministic Guarantee:</span> Pure V8 execution. Independent of external models or probabilistic scoring during pipeline progression.
+                <div className="mt-6 border-t border-border pt-4 text-xs text-muted-foreground">
+                  <p>
+                    <strong className="font-semibold text-foreground">Deterministic guarantee:</strong> Executed strictly in-process within Node.js / V8, with zero model hallucinations during pipeline progression.
+                  </p>
                 </div>
               </div>
             </div>
@@ -361,128 +389,33 @@ export function ArchitectureClient() {
         </section>
 
         {/* ========================================================================= */}
-        {/* 3. MULTI-TIER SYSTEM TOPOLOGY MAP */}
+        {/* 4. CODE INTEGRATION (2-LINE DROP-IN SDK BLUEPRINT) */}
         {/* ========================================================================= */}
-        <section className="mt-28">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">System Architecture</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
-              End-to-End Infrastructure Topology
+        <section className="border-b border-border py-16">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              SDK integration blueprint
             </h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              A bird&apos;s-eye view of how PromptShield sits in your stack, insulating model providers and persisting audit trails.
+            <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+              Because PromptShield functions as an OpenAI-compatible reverse proxy, existing codebases require only a baseURL and API key adjustment.
             </p>
           </div>
 
-          <div className="mt-12 overflow-hidden rounded-3xl border border-border bg-surface p-6 shadow-md sm:p-10">
-            <div className="grid gap-6 lg:grid-cols-3">
-              {/* Tier 1: Client Applications */}
-              <div className="rounded-2xl border border-border bg-surface-subtle p-6">
-                <div className="flex items-center justify-between">
-                  <span className="rounded-md bg-primary/10 px-2 py-0.5 font-mono text-[11px] font-bold text-primary">
-                    TIER 1
-                  </span>
-                  <span className="text-xs text-muted-foreground">Client Apps</span>
-                </div>
-                <h3 className="mt-4 text-base font-semibold text-foreground">Client Ingress</h3>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  Your web applications, autonomous agent frameworks, and backend services sending prompt requests.
-                </p>
-
-                <div className="mt-6 space-y-2 font-mono text-xs">
-                  <div className="rounded-xl border border-border bg-surface p-3">Web &amp; Mobile Frontends</div>
-                  <div className="rounded-xl border border-border bg-surface p-3">LangChain &amp; LlamaIndex</div>
-                  <div className="rounded-xl border border-border bg-surface p-3">Customer Support Bots</div>
-                  <div className="rounded-xl border border-border bg-surface p-3">Internal API Services</div>
-                </div>
-              </div>
-
-              {/* Tier 2: PromptShield Gateway Core */}
-              <div className="rounded-2xl border-2 border-primary bg-primary/[0.03] p-6 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="rounded-md bg-primary px-2 py-0.5 font-mono text-[11px] font-bold text-primary-foreground">
-                    TIER 2
-                  </span>
-                  <span className="text-xs font-semibold text-primary">PromptShield Core</span>
-                </div>
-                <h3 className="mt-4 text-base font-semibold text-foreground">Reverse Proxy Gateway</h3>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  High-throughput Node.js / V8 gateway terminating TLS, executing heuristic scanners, and managing rate limits.
-                </p>
-
-                <div className="mt-6 space-y-2 font-mono text-xs">
-                  <div className="rounded-xl border border-primary/30 bg-surface p-3 text-primary font-semibold">
-                    1. Bearer JWT &amp; Tenant Guard
-                  </div>
-                  <div className="rounded-xl border border-primary/30 bg-surface p-3 text-primary font-semibold">
-                    2. Upstash Redis Rate Limiter
-                  </div>
-                  <div className="rounded-xl border border-primary/30 bg-surface p-3 text-primary font-semibold">
-                    3. Canonicalization &amp; De-Obfuscator
-                  </div>
-                  <div className="rounded-xl border border-primary/30 bg-surface p-3 text-primary font-semibold">
-                    4. 50+ Deterministic Rule Scanners
-                  </div>
-                  <div className="rounded-xl border border-primary/30 bg-surface p-3 text-primary font-semibold">
-                    5. Precedence &amp; Action Enforcer
-                  </div>
-                </div>
-              </div>
-
-              {/* Tier 3: Upstream Models & Persistence */}
-              <div className="rounded-2xl border border-border bg-surface-subtle p-6">
-                <div className="flex items-center justify-between">
-                  <span className="rounded-md bg-primary/10 px-2 py-0.5 font-mono text-[11px] font-bold text-primary">
-                    TIER 3
-                  </span>
-                  <span className="text-xs text-muted-foreground">Models &amp; Audit</span>
-                </div>
-                <h3 className="mt-4 text-base font-semibold text-foreground">Inference &amp; Audit Plane</h3>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                  Only allowed or sanitized prompts reach inference providers. Blocked threats never touch this layer.
-                </p>
-
-                <div className="mt-6 space-y-2 font-mono text-xs">
-                  <div className="rounded-xl border border-border bg-surface p-3">Groq LPUs / Fast Inference</div>
-                  <div className="rounded-xl border border-border bg-surface p-3">OpenAI (GPT-4o, o3-mini)</div>
-                  <div className="rounded-xl border border-border bg-surface p-3">Anthropic (Claude 3.5 Sonnet)</div>
-                  <div className="rounded-xl border border-border bg-surface p-3">Google Gemini &amp; Local vLLM</div>
-                  <div className="rounded-xl border border-border bg-surface p-3 font-semibold text-muted-foreground">
-                    Firestore Encrypted Audit Trail
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ========================================================================= */}
-        {/* 4. CODE INTEGRATION & 2-LINE DROP-IN SDK BLUEPRINT */}
-        {/* ========================================================================= */}
-        <section className="mt-28">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Developer Blueprint</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
-              2-Line Drop-in SDK Integration
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Because PromptShield is a transparent reverse proxy, you don&apos;t have to rewrite your application or learn proprietary SDKs. Just point your existing OpenAI client to PromptShield.
-            </p>
-          </div>
-
-          <div className="mt-10 overflow-hidden rounded-3xl border border-border bg-surface shadow-md">
+          <div className="mt-8 rounded-lg border border-border bg-surface">
             {/* Code Tabs Header */}
-            <div className="flex items-center justify-between border-b border-border bg-surface-subtle px-6 py-3.5">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+              <div className="flex items-center gap-1.5" role="tablist" aria-label="Code languages">
                 {(["typescript", "python", "curl"] as const).map((lang) => (
                   <button
                     key={lang}
                     type="button"
+                    role="tab"
+                    aria-selected={activeCodeLang === lang}
                     onClick={() => setActiveCodeLang(lang)}
                     className={cn(
-                      "rounded-lg px-3 py-1.5 font-mono text-xs font-semibold uppercase transition-all",
+                      "rounded px-2.5 py-1 font-mono text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       activeCodeLang === lang
-                        ? "bg-surface text-foreground shadow-xs border border-border"
+                        ? "bg-foreground text-background"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
@@ -494,15 +427,24 @@ export function ArchitectureClient() {
               <button
                 type="button"
                 onClick={handleCopyCode}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground shadow-xs"
+                className="inline-flex items-center gap-1.5 rounded border border-border bg-surface-subtle px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
               >
-                <Copy className="h-3.5 w-3.5" />
-                <span>{copiedCode ? "Copied!" : "Copy Code"}</span>
+                {copiedCode ? (
+                  <>
+                    <Check className="h-3 w-3 text-foreground" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3 w-3" />
+                    <span>Copy code</span>
+                  </>
+                )}
               </button>
             </div>
 
             {/* Code Block Content */}
-            <div className="bg-[#050811] p-6 sm:p-8 font-mono text-xs sm:text-sm text-slate-200 overflow-x-auto leading-relaxed">
+            <div className="p-4 sm:p-6 font-mono text-xs sm:text-sm text-foreground overflow-x-auto leading-relaxed">
               <pre>
                 <code>{CODE_EXAMPLES[activeCodeLang]}</code>
               </pre>
@@ -513,70 +455,79 @@ export function ArchitectureClient() {
         {/* ========================================================================= */}
         {/* 5. ARCHITECTURAL COMPARISON MATRIX */}
         {/* ========================================================================= */}
-        <section className="mt-28">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Strategic Advantage</p>
-            <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
-              Why an Edge Reverse Proxy Wins
+        <section className="border-b border-border py-16">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              Architectural comparison
             </h2>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Compare PromptShield&apos;s reverse-proxy gateway architecture with traditional prompt wrapping and client-side guardrails.
+            <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+              A comparative evaluation between inline reverse-proxy gateways, client-side SDK guardrails, and system prompt wrapping.
             </p>
           </div>
 
-          <div className="mt-12 overflow-x-auto">
+          <div className="mt-8 overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="py-4 pr-6 font-semibold">Security Requirement</th>
-                  <th className="px-6 py-4 font-semibold text-primary">PromptShield Gateway</th>
-                  <th className="px-6 py-4 font-semibold text-muted-foreground">Client SDKs / Guardrails</th>
-                  <th className="pl-6 py-4 font-semibold text-muted-foreground">System Prompt Wrapping</th>
+                <tr className="border-b border-border text-xs text-muted-foreground font-semibold">
+                  <th className="py-3.5 pr-6 font-medium">Security requirement</th>
+                  <th className="px-6 py-3.5 font-semibold text-foreground">
+                    PromptShield Gateway
+                  </th>
+                  <th className="px-6 py-3.5 font-medium text-muted-foreground">
+                    Client SDKs / Guardrails
+                  </th>
+                  <th className="pl-6 py-3.5 font-medium text-muted-foreground">
+                    System Prompt Wrapping
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border text-foreground">
                 {[
                   {
-                    req: "Tamper-Proof Execution",
-                    ps: "100% Server-side; cannot be bypassed by client app",
-                    sdk: "Vulnerable to client-side code modification",
-                    wrap: "Easily bypassed by prompt override instructions",
+                    req: "Tamper-proof execution",
+                    ps: "Server-side proxy; cannot be bypassed by client app tampering",
+                    sdk: "Vulnerable to client-side code modification or bypass",
+                    wrap: "Vulnerable to direct instruction override and jailbreaks",
                   },
                   {
-                    req: "API Key & Secret Protection",
-                    ps: "Keys reside securely in gateway; zero client leakage",
-                    sdk: "Requires shipping API secrets to client",
-                    wrap: "Vulnerable to system prompt leakage",
+                    req: "API key and credential insulation",
+                    ps: "Keys reside on the proxy gateway; never shipped to clients",
+                    sdk: "Requires distributing credentials to client applications",
+                    wrap: "Vulnerable to system prompt leakage and exfiltration",
                   },
                   {
-                    req: "Zero Upstream LLM Cost on Block",
+                    req: "Zero upstream LLM cost on block",
                     ps: "Terminated in sub-15ms; zero model tokens billed",
-                    sdk: "Model still executed if client fails",
-                    wrap: "Full token cost incurred even on malicious queries",
+                    sdk: "Model is frequently invoked before client filter runs",
+                    wrap: "Full token costs incurred even on malicious queries",
                   },
                   {
-                    req: "Model-Agnostic Policy Management",
-                    ps: "Central policy rules apply across all model providers",
-                    sdk: "Must be reimplemented per SDK / runtime",
-                    wrap: "Fragile; re-prompting needed per model update",
+                    req: "Model-agnostic policy enforcement",
+                    ps: "Central policy rules apply uniformly across all providers",
+                    sdk: "Must be re-implemented per SDK and language runtime",
+                    wrap: "Fragile; re-prompting needed per model revision",
                   },
                   {
-                    req: "Immutable Compliance Audit Trail",
-                    ps: "Every request cryptographically hashed & recorded",
-                    sdk: "Requires custom logging infrastructure",
-                    wrap: "Zero native audit logging or verification",
+                    req: "Immutable compliance audit trail",
+                    ps: "Every request is cryptographically hashed and logged",
+                    sdk: "Requires dedicated external logging infrastructure",
+                    wrap: "Zero native audit logging or verification mechanisms",
                   },
                 ].map((row, idx) => (
                   <tr key={idx} className="transition-colors hover:bg-surface-subtle">
                     <td className="py-4 pr-6 font-medium text-foreground">{row.req}</td>
-                    <td className="px-6 py-4 font-semibold text-primary">
-                      <span className="flex items-center gap-1.5">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <td className="px-6 py-4 font-semibold text-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Check className="h-4 w-4 text-foreground shrink-0" />
                         <span>{row.ps}</span>
-                      </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground text-xs">{row.sdk}</td>
-                    <td className="pl-6 py-4 text-muted-foreground text-xs">{row.wrap}</td>
+                    <td className="px-6 py-4 text-xs text-muted-foreground leading-relaxed">
+                      {row.sdk}
+                    </td>
+                    <td className="pl-6 py-4 text-xs text-muted-foreground leading-relaxed">
+                      {row.wrap}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -585,35 +536,35 @@ export function ArchitectureClient() {
         </section>
 
         {/* ========================================================================= */}
-        {/* 6. BOTTOM CALL TO ACTION */}
+        {/* 6. CALL TO ACTION (DIGNIFIED, NO AI GLOW) */}
         {/* ========================================================================= */}
-        <section className="mt-28">
-          <div className="relative overflow-hidden rounded-3xl border border-border bg-surface px-6 py-12 text-center shadow-md sm:px-12 sm:py-16">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.06] [background-image:linear-gradient(to_right,currentColor_1px,transparent_1px),linear-gradient(to_bottom,currentColor_1px,transparent_1px)] [background-size:24px_24px] text-foreground"
-            />
-            <div className="relative z-10 mx-auto max-w-2xl">
-              <h2 className="text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
-                Deploy the Gateway in Minutes
+        <footer className="pt-16">
+          <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                Deploy PromptShield in your pipeline
               </h2>
-              <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                Protect your production LLM deployments with sub-15ms latency, deterministic guardrail enforcement, and immutable audit trails.
+              <p className="mt-1 text-sm text-muted-foreground">
+                Configure your upstream proxy endpoint in under two minutes.
               </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-                <FlowButton text="Get Started with PromptShield" href="/login" />
-                <Link
-                  href="/security"
-                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-subtle px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-xs"
-                >
-                  <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                  <span>Review Threat Defense Model</span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center rounded-lg bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
+              >
+                Get Started
+              </Link>
+              <Link
+                href="/security"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              >
+                <span>Security Model</span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
             </div>
           </div>
-        </section>
+        </footer>
       </div>
     </div>
   );
