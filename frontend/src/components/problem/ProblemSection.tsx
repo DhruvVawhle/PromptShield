@@ -3,6 +3,7 @@
 import * as React from "react";
 import gsap from "gsap";
 import { ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Reveal } from "@/components/landing/reveal";
 import { SplitTextReveal } from "@/components/animations/split-text-reveal";
 import { ContextWindowDemo } from "./ContextWindowDemo";
@@ -341,12 +342,32 @@ export function ProblemSection() {
                   tabIndex={active ? 0 : -1}
                   type="button"
                   onClick={() => handleTabClick(t)}
-                  className={active ? "problem-tab problem-tab--active" : "problem-tab"}
+                  className={cn(
+                    "problem-tab group relative flex w-full flex-col text-left transition-all duration-200 select-none",
+                    "px-3.5 py-3 border-l-2 text-[14px] leading-snug shrink-0 overflow-hidden rounded-r-lg",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                    active
+                      ? "problem-tab--active border-slate-900 bg-slate-900/[0.04] text-slate-950 font-semibold dark:border-blue-500 dark:bg-white/[0.06] dark:text-white"
+                      : "border-transparent text-slate-600 hover:text-slate-950 hover:bg-slate-100/70 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.03] font-normal"
+                  )}
                 >
-                  <span className="problem-tab__label">{t.label}</span>
-                  {active ? <span className="problem-tab__hint">{t.hint}</span> : null}
+                  <span
+                    className={cn(
+                      "problem-tab__label transition-colors",
+                      active
+                        ? "text-slate-950 dark:text-white font-semibold"
+                        : "text-slate-600 dark:text-slate-400 group-hover:text-slate-950 dark:group-hover:text-white font-medium"
+                    )}
+                  >
+                    {t.label}
+                  </span>
                   {active ? (
-                    <ArrowRight className="problem-tab__arrow" aria-hidden="true" />
+                    <span className="problem-tab__hint mt-1 block text-[13px] font-normal text-slate-600 dark:text-slate-300 leading-normal">
+                      {t.hint}
+                    </span>
+                  ) : null}
+                  {active ? (
+                    <ArrowRight className="problem-tab__arrow absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-900 dark:text-blue-400" aria-hidden="true" />
                   ) : null}
                   <span className="sr-only">
                     {idx + 1} of {THREATS.length}
@@ -369,7 +390,12 @@ export function ProblemSection() {
                   type="button"
                   aria-pressed={mode === "unprotected"}
                   onClick={() => handleModeClick("unprotected")}
-                  className={mode === "unprotected" ? "problem-seg problem-seg--on" : "problem-seg"}
+                  className={cn(
+                    "rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    mode === "unprotected"
+                      ? "bg-slate-900 text-white dark:bg-blue-600 dark:text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  )}
                 >
                   Unprotected
                 </button>
@@ -377,7 +403,12 @@ export function ProblemSection() {
                   type="button"
                   aria-pressed={mode === "protected"}
                   onClick={() => handleModeClick("protected")}
-                  className={mode === "protected" ? "problem-seg problem-seg--on" : "problem-seg"}
+                  className={cn(
+                    "rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    mode === "protected"
+                      ? "bg-slate-900 text-white dark:bg-blue-600 dark:text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  )}
                 >
                   Protected
                 </button>
@@ -396,125 +427,6 @@ export function ProblemSection() {
           </div>
         </div>
       </div>
-
-      <style>{`
-        .problem-tablist { --p: 1; }
-        .problem-tab {
-          position: relative;
-          text-align: left;
-          width: 100%;
-          padding: 12px 28px 12px 12px;
-          border-left: 2px solid transparent;
-          background: transparent;
-          color: #0f172a;
-          font-size: 14px;
-          line-height: 1.35;
-          flex-shrink: 0;
-          overflow: hidden;
-        }
-        .dark .problem-tab {
-          color: #f1f5f9;
-        }
-        .problem-tab::before {
-          content: "";
-          position: absolute;
-          left: 0;
-          top: 0;
-          right: 0;
-          height: 2px;
-          background: #0f172a;
-          transform: scaleX(var(--p, 1));
-          transform-origin: left center;
-          transition: none;
-          opacity: 0;
-          pointer-events: none;
-        }
-        .dark .problem-tab::before {
-          background: #3b82f6;
-        }
-        .problem-tab--active::before {
-          opacity: 1;
-        }
-        @media (max-width: 900px) {
-          .problem-tab::before { display: none; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .problem-tab::before { display: none; }
-        }
-        .problem-tab:focus-visible {
-          outline: 2px solid #2563eb;
-          outline-offset: 2px;
-          border-radius: 6px;
-        }
-        .problem-tab--active {
-          border-left-color: #0f172a;
-          font-weight: 700;
-        }
-        .dark .problem-tab--active {
-          border-left-color: #3b82f6;
-        }
-        .problem-tab__hint {
-          display: block;
-          margin-top: 4px;
-          font-size: 13px;
-          font-weight: 400;
-          color: #465266;
-        }
-        .dark .problem-tab__hint {
-          color: #94a3b8;
-        }
-        .problem-tab__arrow {
-          position: absolute;
-          right: 8px;
-          top: 50%;
-          width: 16px;
-          height: 16px;
-          color: #0f172a;
-          transform: translateY(-50%) translateX(-4px);
-          opacity: 0;
-          animation: problem-arrow-in 220ms ease forwards;
-          pointer-events: none;
-        }
-        .dark .problem-tab__arrow {
-          color: #3b82f6;
-        }
-        @keyframes problem-arrow-in {
-          to { opacity: 1; transform: translateY(-50%) translateX(0); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .problem-tab__arrow { animation: none; opacity: 1; transform: translateY(-50%) translateX(0); }
-        }
-        @media (max-width: 900px) {
-          .problem-tab { border-left: 0; border-bottom: 2px solid transparent; white-space: nowrap; }
-          .problem-tab--active { border-bottom-color: #0f172a; border-left-color: transparent; }
-          .dark .problem-tab--active { border-bottom-color: #3b82f6; }
-          .problem-tab__hint { display: inline; margin-left: 8px; }
-          .problem-tab__arrow { display: none; }
-        }
-        .problem-seg {
-          border-radius: 9999px;
-          padding: 6px 12px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #465266;
-          background: transparent;
-          border: 1px solid transparent;
-        }
-        .dark .problem-seg {
-          color: #94a3b8;
-        }
-        .problem-seg:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-        .problem-seg--on {
-          background: #0f172a;
-          color: #fff;
-          border-color: #0f172a;
-        }
-        .dark .problem-seg--on {
-          background: #3b82f6;
-          color: #fff;
-          border-color: #3b82f6;
-        }
-      `}</style>
     </section>
   );
 }

@@ -100,10 +100,10 @@ export function CubertoCursor() {
         }
 
         // Snappy, responsive tracking without sluggish lag
-        dotX += (destX - dotX) * 0.85;
-        dotY += (destY - dotY) * 0.85;
-        ringX += (destX - ringX) * 0.35;
-        ringY += (destY - ringY) * 0.35;
+        dotX += (destX - dotX) * 0.9;
+        dotY += (destY - dotY) * 0.9;
+        ringX += (destX - ringX) * 0.45;
+        ringY += (destY - ringY) * 0.45;
 
         dot.style.transform = `translate3d(${dotX}px, ${dotY}px, 0) translate(-50%, -50%) scale(${
           isInput ? 0 : isClicking ? 0.7 : isHovering ? 0.3 : 1
@@ -122,20 +122,20 @@ export function CubertoCursor() {
         // Adaptive colors for pristine clarity in both Light and Dark mode
         const isDark = document.documentElement.classList.contains("dark");
         if (isDark) {
-          dot.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
+          dot.style.backgroundColor = "rgba(255, 255, 255, 1)";
           cursor.style.borderColor = isHovering
-            ? "rgba(255, 255, 255, 0.9)"
-            : "rgba(255, 255, 255, 0.4)";
+            ? "rgba(255, 255, 255, 0.95)"
+            : "rgba(255, 255, 255, 0.65)";
           cursor.style.backgroundColor = isHovering
-            ? "rgba(255, 255, 255, 0.12)"
+            ? "rgba(255, 255, 255, 0.15)"
             : "transparent";
         } else {
-          dot.style.backgroundColor = "rgba(15, 23, 42, 0.9)";
+          dot.style.backgroundColor = "rgba(15, 23, 42, 1)";
           cursor.style.borderColor = isHovering
-            ? "rgba(15, 23, 42, 0.85)"
-            : "rgba(15, 23, 42, 0.35)";
+            ? "rgba(15, 23, 42, 0.95)"
+            : "rgba(15, 23, 42, 0.55)";
           cursor.style.backgroundColor = isHovering
-            ? "rgba(15, 23, 42, 0.08)"
+            ? "rgba(15, 23, 42, 0.1)"
             : "transparent";
         }
       }
