@@ -17,7 +17,8 @@ PromptShield is an enterprise-grade AI security gateway and management platform 
 | **Audit** | Immutable Audit Trail | Automatic, tamper-resistant audit logging for policy mutations, security decisions, unauthorized access attempts, and incident triaging. |
 | **Triage** | Incident Resolution | End-to-end incident management with status lifecycle tracking (`OPEN`, `INVESTIGATING`, `RESOLVED`, `FALSE_POSITIVE`) and sanitized resolution notes. |
 | **Diagnose** | Platform Telemetry | Continuous bounded liveness and readiness probes across Firestore, Upstash Redis, Groq AI Engine, and the compiled rule engine. |
-| **Experience** | Awwwards & Impeccable UX | Smooth Lenis inertia scrolling synchronized with GSAP tickers, Cuberto magnetic spring follower cursor (dark/light adaptive), real-time streaming AI chat auto-scroll, top-edge kinetic scroll tracker, and Hallmark-verified design. |
+| **Specifications** | Security & Architecture | Dedicated whitepaper specifications: interactive OWASP Top 10 matrix with wire telemetry (`/security`) and end-to-end 3-tier reverse-proxy topology with 6-stage pipeline contracts (`/architecture`). |
+| **Experience** | Hallmark & Impeccable UX | Un-slopped, editorial design with Lenis inertia scrolling, GSAP tickers, Cuberto magnetic follower cursor (adaptive dark/light), WCAG AAA 11:1+ dark mode contrast, and zero language-service warnings. |
 
 ### Threat Coverage
 
@@ -35,10 +36,13 @@ PromptShield is an enterprise-grade AI security gateway and management platform 
 ```
 PromptShield/
 ├── firestore.rules            # Server-side Firestore security rules (client write locks)
+├── .vscode/                   # VS Code & Antigravity IDE configuration (Tailwind v4 rules)
 ├── frontend/                  # Next.js 16 full-stack application
 │   ├── src/
 │   │   ├── app/
 │   │   │   ├── (public)/      # Public pages (Landing, About, Security, Architecture, Contact, Privacy, Terms)
+│   │   │   │   ├── security/  # /security (OWASP LLM matrix, wire headers, threat simulator)
+│   │   │   │   └── architecture/ # /architecture (3-tier topology, 6-stage pipeline, SDK blueprint)
 │   │   │   ├── (dashboard)/   # Authenticated dashboard (Chat, Incidents, Policies, Audit Logs, Users, System)
 │   │   │   │   ├── incidents/ # Incident triage and review drawer
 │   │   │   │   ├── policies/  # Custom guardrail policy management
@@ -78,6 +82,20 @@ PromptShield/
 │   └── package.json
 └── package.json               # Root workspace scripts
 ```
+
+### 🌐 Architectural & Security Specifications
+
+- **[`/security`](frontend/src/app/(public)/security/page.tsx) — Security Model & OWASP LLM Top 10 Matrix:**
+  - Comprehensive vulnerability catalog addressing the **OWASP Top 10 for Large Language Models** (Direct Injection, Exfiltration, Jailbreaks, Indirect Poisoning, Obfuscation, Credential Probing, Tool Abuse, PII Exposure) with real-world exploit vectors and deterministic defense rules.
+  - Interactive **Threat Inspection Simulator** that dynamically extracts risk signals, assigns normalized risk scores (0–100), and demonstrates fail-closed decision enforcement in real time.
+  - Real-world **Wire Telemetry Inspector** detailing deterministic HTTP headers (`X-Security-Decision`, `X-Security-Risk-Score`, `X-PromptShield-Latency`) and response codes (`200 OK`, `403 Forbidden`).
+  - Architectural guarantees: zero prompt retention for model training, strict multi-tenant isolation, cryptographic HMAC audit logging, and fail-closed gateway resilience.
+
+- **[`/architecture`](frontend/src/app/(public)/architecture/page.tsx) — End-to-End Reverse-Proxy Architecture:**
+  - **3-Tier Infrastructure Topology:** Client Ingress (REST/OpenAI SDK) -> PromptShield Gateway Core (V8 normalization, heuristics, policy resolution) -> Inference & Audit Plane (Groq, OpenAI, Anthropic, Gemini, Firestore).
+  - **6-Stage Request/Response Pipeline:** Complete data contracts and sub-15ms execution latency across Ingress, Canonicalization, Heuristic Scanners, Risk Scoring, Policy Precedence, and Upstream Dispatch.
+  - **2-Line SDK Drop-in Blueprint:** Transparent OpenAI SDK replacement across TypeScript, Python, and cURL by pointing `baseURL` directly to the PromptShield gateway.
+  - **Gateway vs. Client-Side Guardrail Analysis:** Architectural comparison demonstrating why server-side edge proxies eliminate client-tampering vulnerabilities, token leakages, and malicious token billing.
 
 ---
 
