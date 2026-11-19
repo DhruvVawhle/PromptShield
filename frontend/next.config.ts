@@ -1,7 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
+  // Enable React Compiler in production for zero-cost runtime optimizations,
+  // while keeping dev builds lightning-fast without Babel AST traversal overhead.
+  reactCompiler: process.env.NODE_ENV === "production",
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "framer-motion",
+      "@base-ui/react",
+      "cmdk",
+    ],
+  },
   turbopack: {
     root: __dirname,
   },
