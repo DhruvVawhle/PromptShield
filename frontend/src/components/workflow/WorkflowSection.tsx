@@ -181,7 +181,7 @@ export function WorkflowSection() {
               <div key={s.id} className="workflow-mobile-item">
                 <p className="font-mono text-xs font-medium text-muted-foreground">{s.id}</p>
                 <h3 className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-foreground">{s.title}</h3>
-                <p className="mt-2 text-[15px] leading-7 text-[#465266]">{s.description}</p>
+                <p className="mt-2 text-[15px] leading-7 text-muted-foreground">{s.description}</p>
                 <div className="mt-4">{s.artifact}</div>
               </div>
             ))}
@@ -232,7 +232,7 @@ export function WorkflowSection() {
                 <h3 ref={titleRef} className="mt-3 text-[30px] font-semibold tracking-[-0.02em] text-foreground">
                   {step.title}
                 </h3>
-                <p ref={descRef} className="mt-3 max-w-[420px] text-[16.5px] leading-7 text-[#465266]">
+                <p ref={descRef} className="mt-3 max-w-[420px] text-[16.5px] leading-7 text-muted-foreground">
                   {step.description}
                 </p>
               </div>
@@ -241,7 +241,7 @@ export function WorkflowSection() {
               </div>
             </div>
 
-            <p className="pt-8 text-center text-sm text-[#465266]">
+            <p className="pt-8 text-center text-sm text-muted-foreground">
               Scroll to move the prompt through each step, or select a step.
             </p>
           </div>

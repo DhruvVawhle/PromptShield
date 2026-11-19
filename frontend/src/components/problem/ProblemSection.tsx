@@ -306,7 +306,7 @@ export function ProblemSection() {
             </SplitTextReveal>
           </Reveal>
 
-          <Reveal className="space-y-5 text-[14px] leading-7 text-[#465266]" delay={0.08}>
+          <Reveal className="space-y-5 text-[14px] leading-7 text-muted-foreground" delay={0.08}>
             <p>
               Modern LLM applications are exposed to prompt injection, jailbreak attempts, instruction manipulation, and indirect attacks carried through external content. Even a
               well-designed model can be misled when untrusted inputs override higher-priority instructions or try to extract hidden context.
@@ -358,9 +358,9 @@ export function ProblemSection() {
 
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <p className="inline-flex items-center gap-2 text-[13px] font-medium text-[#465266]">
+              <p className="inline-flex items-center gap-2 text-[13px] font-medium text-muted-foreground">
                 What the model receives
-                <span className="font-mono text-[11px] font-normal tabular-nums text-[#94a3b8]">
+                <span className="font-mono text-[11px] font-normal tabular-nums text-muted-foreground/80">
                   {String(selectedIndex + 1).padStart(2, "0")} of {String(THREATS.length).padStart(2, "0")}
                 </span>
               </p>
@@ -412,6 +412,9 @@ export function ProblemSection() {
           flex-shrink: 0;
           overflow: hidden;
         }
+        .dark .problem-tab {
+          color: #f1f5f9;
+        }
         .problem-tab::before {
           content: "";
           position: absolute;
@@ -425,6 +428,9 @@ export function ProblemSection() {
           transition: none;
           opacity: 0;
           pointer-events: none;
+        }
+        .dark .problem-tab::before {
+          background: #3b82f6;
         }
         .problem-tab--active::before {
           opacity: 1;
@@ -444,12 +450,18 @@ export function ProblemSection() {
           border-left-color: #0f172a;
           font-weight: 700;
         }
+        .dark .problem-tab--active {
+          border-left-color: #3b82f6;
+        }
         .problem-tab__hint {
           display: block;
           margin-top: 4px;
           font-size: 13px;
           font-weight: 400;
           color: #465266;
+        }
+        .dark .problem-tab__hint {
+          color: #94a3b8;
         }
         .problem-tab__arrow {
           position: absolute;
@@ -463,6 +475,9 @@ export function ProblemSection() {
           animation: problem-arrow-in 220ms ease forwards;
           pointer-events: none;
         }
+        .dark .problem-tab__arrow {
+          color: #3b82f6;
+        }
         @keyframes problem-arrow-in {
           to { opacity: 1; transform: translateY(-50%) translateX(0); }
         }
@@ -472,6 +487,7 @@ export function ProblemSection() {
         @media (max-width: 900px) {
           .problem-tab { border-left: 0; border-bottom: 2px solid transparent; white-space: nowrap; }
           .problem-tab--active { border-bottom-color: #0f172a; border-left-color: transparent; }
+          .dark .problem-tab--active { border-bottom-color: #3b82f6; }
           .problem-tab__hint { display: inline; margin-left: 8px; }
           .problem-tab__arrow { display: none; }
         }
@@ -484,11 +500,19 @@ export function ProblemSection() {
           background: transparent;
           border: 1px solid transparent;
         }
+        .dark .problem-seg {
+          color: #94a3b8;
+        }
         .problem-seg:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
         .problem-seg--on {
           background: #0f172a;
           color: #fff;
           border-color: #0f172a;
+        }
+        .dark .problem-seg--on {
+          background: #3b82f6;
+          color: #fff;
+          border-color: #3b82f6;
         }
       `}</style>
     </section>
