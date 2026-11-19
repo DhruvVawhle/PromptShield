@@ -168,27 +168,42 @@ export default function ModernLoginSignup({ initialMode = "login" }: ModernLogin
 
   function friendlyMessage(error: unknown): string | null {
     const code = (error as { code?: string })?.code;
+    const msg = (error as { message?: string })?.message ?? "";
+
+    if (code === "auth/internal-error" || msg.includes("auth/internal-error")) {
+      return "Authentication service error. If you are using Google or GitHub sign-in, please verify that OAuth providers are enabled in Firebase Authentication, or sign in using email and password.";
+    }
+    if (code === "auth/operation-not-allowed" || msg.includes("operation-not-allowed")) {
+      return "This sign-in method is not enabled in Firebase Console. Please use email and password.";
+    }
+    if (code === "auth/configuration-not-found" || msg.includes("configuration-not-found")) {
+      return "OAuth provider configuration is not completed in Firebase. Please sign in with email and password.";
+    }
+    if (code === "auth/unauthorized-domain" || msg.includes("unauthorized-domain")) {
+      return "Domain not authorized for authentication. Please add localhost to Authorized Domains in Firebase Console.";
+    }
+
     if (!code) return null;
     switch (code) {
       case "auth/invalid-credential":
       case "auth/wrong-password":
-        return "Invalid email or password.";
+        return "Invalid email or password. Please verify your credentials.";
       case "auth/user-not-found":
-        return "No account found for that email.";
+        return "No account found with this email. Please sign up first.";
       case "auth/email-already-in-use":
-        return "An account with that email already exists.";
+        return "An account with that email already exists. Please sign in instead.";
       case "auth/weak-password":
-        return "Password is too weak. Use at least 6 characters.";
+        return "Password is too weak. Please use at least 8 characters.";
       case "auth/invalid-email":
-        return "Enter a valid email address.";
+        return "Please enter a valid email address.";
       case "auth/popup-closed-by-user":
-        return "Sign-in was cancelled.";
+        return "Sign-in popup was closed before completion.";
       case "auth/popup-blocked":
-        return "Pop-up was blocked. Allow pop-ups and try again.";
+        return "Sign-in popup was blocked by your browser. Please allow popups for localhost.";
       case "auth/network-request-failed":
-        return "Network error. Check your connection and try again.";
+        return "Network connection error. Check your connection or ad-blocker and try again.";
       case "auth/too-many-requests":
-        return "Too many attempts. Please try again later.";
+        return "Too many failed attempts. Please wait a moment and try again.";
       default:
         return null;
     }

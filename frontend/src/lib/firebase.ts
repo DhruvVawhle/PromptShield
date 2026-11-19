@@ -52,6 +52,7 @@ function validateFirebaseConfig() {
 
 let appInstance: FirebaseApp | null = null;
 let firestoreInstance: Firestore | null = null;
+let authInstance: Auth | null = null;
 
 function getFirebaseApp(): FirebaseApp {
   if (appInstance) return appInstance;
@@ -69,7 +70,9 @@ function getFirebaseApp(): FirebaseApp {
 }
 
 export function getFirebaseAuth(): Auth {
-  return getAuth(getFirebaseApp());
+  if (authInstance) return authInstance;
+  authInstance = getAuth(getFirebaseApp());
+  return authInstance;
 }
 
 export function getFirebaseFirestore(): Firestore {
