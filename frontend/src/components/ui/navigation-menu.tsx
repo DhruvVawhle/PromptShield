@@ -11,6 +11,7 @@ import {
 import { ArrowRight, Menu, Moon, Sun, X, LogOut, User, Settings, ChevronDown, LayoutDashboard } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
+import { useLenis } from "lenis/react";
 
 import { cn } from "@/lib/utils";
 import { FlowButton } from "@/components/ui/flow-button";
@@ -119,7 +120,35 @@ export function NavigationMenu({
   const firstItemRef = React.useRef<HTMLAnchorElement>(null);
 
   const brandLabel = brand?.label ?? "PromptShield";
-  const brandHref = brand?.href ?? "#home";
+  const brandHref = brand?.href ?? "/";
+  const lenis = useLenis();
+
+  const handleBrandClick = React.useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>) => {
+      setOpen(false);
+      const targetHref = brandHref;
+      const currentPath = activePath ?? (typeof window !== "undefined" ? window.location.pathname : "");
+      const isTargetingHome = targetHref === "/" || targetHref === "#home" || targetHref === "";
+
+      if (isTargetingHome && (currentPath === "/" || currentPath === "")) {
+        e.preventDefault();
+        const wrappedLenis = lenis as unknown as {
+          scrollTo?: (target: number | HTMLElement, options?: { duration?: number; offset?: number }) => void;
+        } | null;
+        if (wrappedLenis?.scrollTo) {
+          wrappedLenis.scrollTo(0, { duration: 1.1 });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        if (typeof window !== "undefined" && window.location.hash) {
+          window.history.pushState(null, "", "/");
+        }
+      } else {
+        router.push(targetHref.startsWith("#") ? "/" + targetHref : targetHref);
+      }
+    },
+    [activePath, brandHref, lenis, router]
+  );
 
   const isAuthenticated = !loading && !!user;
   const displayName = profile?.name ?? user?.displayName ?? user?.email?.split("@")[0] ?? "User";
@@ -247,6 +276,7 @@ export function NavigationMenu({
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Link
             href={brandHref}
+            onClick={handleBrandClick}
             aria-label={`${brandLabel} home`}
             className={cn(
               "group flex shrink-0 items-center rounded-lg text-[15px] font-semibold uppercase tracking-[-0.055em] transition-opacity duration-200 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
