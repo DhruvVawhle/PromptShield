@@ -70,7 +70,11 @@ export function Header() {
             />
             <SheetContent side="left" className="w-[280px] p-0 sm:max-w-none">
               <div className="flex h-[56px] items-center border-b border-border px-4">
-                <Link href="/" className="text-[13px] font-semibold tracking-[0.08em] text-foreground hover:opacity-80 transition-opacity">
+                <Link
+                  href="/"
+                  aria-label="PromptShield home"
+                  className="text-[13px] font-semibold tracking-[0.08em] text-foreground hover:opacity-80 transition-opacity"
+                >
                   PROMPTSHIELD
                 </Link>
               </div>
@@ -90,7 +94,11 @@ export function Header() {
         </div>
 
         <div className="hidden md:flex items-center">
-          <Link href="/" className="text-[13px] font-semibold tracking-[0.08em] text-foreground hover:opacity-80 transition-opacity">
+          <Link
+            href="/"
+            aria-label="PromptShield home"
+            className="text-[13px] font-semibold tracking-[0.08em] text-foreground hover:opacity-80 transition-opacity"
+          >
             PROMPTSHIELD
           </Link>
         </div>
