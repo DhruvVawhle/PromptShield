@@ -18,19 +18,17 @@ const plexMono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
 });
 
+const STEP_PROGRESS = [0.035, 0.214, 0.393, 0.571, 0.750, 0.928];
+
 export function WorkflowSection() {
   const sectionRef = React.useRef<HTMLElement>(null);
   const pinRef = React.useRef<HTMLDivElement>(null);
   const railRef = React.useRef<HTMLDivElement>(null);
   const fillRef = React.useRef<HTMLSpanElement>(null);
   const packetRef = React.useRef<HTMLSpanElement>(null);
-  const numberRef = React.useRef<HTMLParagraphElement>(null);
-  const titleRef = React.useRef<HTMLHeadingElement>(null);
-  const descRef = React.useRef<HTMLParagraphElement>(null);
-  const sheetRef = React.useRef<HTMLDivElement>(null);
+  const stepPanesRef = React.useRef<(HTMLDivElement | null)[]>([]);
   const stRef = React.useRef<ScrollTrigger | null>(null);
   const activeIndexRef = React.useRef(0);
-  const railWidthRef = React.useRef(0);
 
   const lenis = useLenis();
   const [mounted, setMounted] = React.useState(false);
@@ -44,12 +42,8 @@ export function WorkflowSection() {
   React.useEffect(() => {
     if (!mounted) return;
     const updateMetrics = () => {
-      if (railRef.current) {
-        railWidthRef.current = railRef.current.clientWidth;
-      }
       ScrollTrigger.refresh();
     };
-    updateMetrics();
     if (document.fonts?.ready) {
       document.fonts.ready.then(updateMetrics).catch(() => {});
     }
@@ -57,52 +51,17 @@ export function WorkflowSection() {
     return () => window.removeEventListener("resize", updateMetrics);
   }, [mounted]);
 
-  React.useEffect(() => {
-    if (!mounted) return;
-    const mql = window.matchMedia("(min-width: 901px) and (prefers-reduced-motion: no-preference)");
-    if (mql.matches) return;
-    const candidates = [numberRef.current, titleRef.current, descRef.current, sheetRef.current] as (HTMLElement | null)[];
-    const els = candidates.filter((el): el is HTMLElement => el !== null);
-    if (els.length === 0) return;
-    const anim = gsap.fromTo(els, { y: 0, opacity: 1 }, { y: 0, opacity: 1, duration: 0 });
-    return () => {
-      anim.kill();
-    };
-  }, [active, mounted]);
-
-  React.useEffect(() => {
-    if (!mounted) return;
-    const mql = window.matchMedia("(min-width: 901px) and (prefers-reduced-motion: no-preference)");
-    if (!mql.matches) return;
-    const candidates = [numberRef.current, titleRef.current, descRef.current] as (HTMLElement | null)[];
-    const textEls = candidates.filter((el): el is HTMLElement => el !== null);
-    if (textEls.length > 0) {
-      gsap.fromTo(
-        textEls,
-        { y: 6, opacity: 0.35 },
-        { y: 0, opacity: 1, duration: 0.22, ease: "power2.out", overwrite: "auto" }
-      );
-    }
-    if (sheetRef.current) {
-      gsap.fromTo(
-        sheetRef.current,
-        { opacity: 0.75, scale: 0.995 },
-        { opacity: 1, scale: 1, duration: 0.2, ease: "power2.out", overwrite: "auto" }
-      );
-    }
-  }, [active, mounted]);
-
   const goTo = React.useCallback(
     (index: number) => {
       const st = stRef.current;
       if (!st) return;
       const start = st.start;
       const end = st.end;
-      const n = STEPS.length;
-      const target = start + (end - start) * (index / (n - 1));
+      const targetProgress = STEP_PROGRESS[index] ?? (index / (STEPS.length - 1));
+      const target = start + (end - start) * targetProgress;
       const wrappedLenis = lenis as unknown as { scrollTo?: (t: number, o?: unknown) => void } | null;
       if (wrappedLenis?.scrollTo) {
-        wrappedLenis.scrollTo(target, { duration: 0.8 });
+        wrappedLenis.scrollTo(target, { duration: 0.9 });
       } else {
         window.scrollTo({ top: target, behavior: "smooth" });
       }
@@ -113,50 +72,103 @@ export function WorkflowSection() {
   useGSAP(
     () => {
       const section = sectionRef.current;
-      if (!section) return;
+      const pinEl = pinRef.current;
+      const rail = railRef.current;
+      const fill = fillRef.current;
+      const packet = packetRef.current;
+      const panes = stepPanesRef.current;
+      if (!section || !pinEl || !rail || !fill || !packet) return;
 
       const mm = gsap.matchMedia();
       mm.add("(min-width: 901px) and (prefers-reduced-motion: no-preference)", () => {
-        const pinEl = pinRef.current;
-        const rail = railRef.current;
-        const fill = fillRef.current;
-        const packet = packetRef.current;
-        if (!pinEl || !rail) return;
-
         const total = STEPS.length;
-        if (fill) gsap.set(fill, { scaleX: 0 });
-        if (packet) gsap.set(packet, { x: 0 });
-        if (rail) railWidthRef.current = rail.clientWidth;
+        const railW = rail.clientWidth || 800;
+
+        // Initialize element visual states
+        panes.forEach((pane, i) => {
+          if (!pane) return;
+          if (i === 0) {
+            gsap.set(pane, { opacity: 1, y: 0, pointerEvents: "auto", visibility: "visible" });
+          } else {
+            gsap.set(pane, { opacity: 0, y: 28, pointerEvents: "none", visibility: "visible" });
+          }
+        });
+
+        gsap.set(fill, { scaleX: 0 });
+        gsap.set(packet, { x: 0 });
+
+        // Total timeline duration = 5.6s
+        // Step 0 resting center: ~0.2s
+        // Step 1 resting center: ~1.2s
+        // Step 2 resting center: ~2.2s
+        // Step 3 resting center: ~3.2s
+        // Step 4 resting center: ~4.2s
+        // Step 5 resting center: ~5.2s
+        const tl = gsap.timeline({
+          paused: true,
+          defaults: { ease: "power2.inOut" },
+        });
+
+        // 1. Continuous smooth packet and fill progression along the rail
+        tl.to(packet, { x: railW, ease: "none", duration: 5.0 }, 0.2);
+        tl.to(fill, { scaleX: 1, ease: "none", duration: 5.0 }, 0.2);
+
+        // 2. Liquid smooth crossfading & upward gliding between each pair of steps
+        for (let i = 0; i < total - 1; i++) {
+          const currentPane = panes[i];
+          const nextPane = panes[i + 1];
+          if (!currentPane || !nextPane) continue;
+
+          const transitionStart = 0.2 + i * 1.0 + 0.3; // 0.3s after step center (ample resting plateau)
+          const transitionDuration = 0.6; // smooth 0.6s scrub interpolation window
+
+          // Outgoing step glides up and dissolves
+          tl.to(
+            currentPane,
+            { opacity: 0, y: -28, duration: transitionDuration, ease: "power2.inOut" },
+            transitionStart
+          );
+
+          // Incoming step glides up from below into resting position
+          tl.fromTo(
+            nextPane,
+            { opacity: 0, y: 28 },
+            { opacity: 1, y: 0, duration: transitionDuration, ease: "power2.inOut" },
+            transitionStart
+          );
+        }
 
         const st = ScrollTrigger.create({
           trigger: section,
           start: "top top",
-          end: () => `+=${window.innerHeight * 3.4}`,
-          pin: pinEl,
+          end: () => `+=${window.innerHeight * 3.5}`,
+          pin: section,
           pinSpacing: true,
-          scrub: true,
+          scrub: 0.6,
+          animation: tl,
           onUpdate: (self) => {
             const p = self.progress;
-            if (fill) gsap.set(fill, { scaleX: p });
-            if (packet) {
-              const w = railWidthRef.current || rail.clientWidth;
-              gsap.set(packet, { x: p * w });
-            }
-            const rawIdx = p * (total - 1);
-            const current = activeIndexRef.current;
-            let nextIdx = current;
-            if (p <= 0.02) {
-              nextIdx = 0;
-            } else if (p >= 0.98) {
-              nextIdx = total - 1;
-            } else if (rawIdx > current + 0.55 && current < total - 1) {
-              nextIdx = Math.min(total - 1, Math.floor(rawIdx + 0.45));
-            } else if (rawIdx < current - 0.55 && current > 0) {
-              nextIdx = Math.max(0, Math.ceil(rawIdx - 0.45));
-            }
-            if (nextIdx !== current) {
-              activeIndexRef.current = nextIdx;
-              setActive(nextIdx);
+
+            // Map progress to active step for the rail markers
+            let closestIdx = 0;
+            let minDiff = 999;
+            STEP_PROGRESS.forEach((sp, idx) => {
+              const diff = Math.abs(p - sp);
+              if (diff < minDiff) {
+                minDiff = diff;
+                closestIdx = idx;
+              }
+            });
+
+            if (closestIdx !== activeIndexRef.current) {
+              activeIndexRef.current = closestIdx;
+              setActive(closestIdx);
+
+              panes.forEach((pane, idx) => {
+                if (pane) {
+                  pane.style.pointerEvents = idx === closestIdx ? "auto" : "none";
+                }
+              });
             }
           },
         });
@@ -165,6 +177,7 @@ export function WorkflowSection() {
 
         return () => {
           st.kill();
+          tl.kill();
           stRef.current = null;
         };
       });
@@ -176,22 +189,21 @@ export function WorkflowSection() {
     { scope: sectionRef }
   );
 
-  const step = STEPS[active]!;
-
   return (
     <section
       ref={sectionRef}
       id="how-it-works"
       data-mounted={mounted ? "true" : "false"}
-      className={`scroll-mt-24 border-t border-border bg-page py-20 ${plexMono.variable}`}
+      className={`relative flex min-h-screen flex-col justify-center scroll-mt-24 border-t border-border bg-page py-16 md:py-20 ${plexMono.variable}`}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold tracking-[-0.05em] text-foreground sm:text-4xl">
             Every prompt. Analyzed before execution.
           </h2>
         </div>
 
+        {/* Mobile / Reduced-Motion Fallback List */}
         <div className="workflow-list">
           <div className="mx-auto max-w-2xl space-y-7 pt-10">
             {STEPS.map((s) => (
@@ -205,8 +217,10 @@ export function WorkflowSection() {
           </div>
         </div>
 
+        {/* Desktop Smooth Scrub Pinned Stage */}
         <div ref={pinRef} className="workflow-pin-wrap">
           <div className="mx-auto max-w-5xl">
+            {/* Interactive Step Rail */}
             <div ref={railRef} className="workflow-rail" aria-hidden="true">
               <span className="workflow-rail__line" />
               <span ref={fillRef} className="workflow-rail__fill" />
@@ -238,23 +252,33 @@ export function WorkflowSection() {
               })}
             </div>
 
-            <div
-              className="workflow-stage mx-auto grid max-w-5xl gap-8 pt-10 md:grid-cols-[1.05fr_1fr] md:items-start"
-              aria-live="polite"
-            >
-              <div className="min-w-0">
-                <p ref={numberRef} className="workflow-number" aria-hidden="true">
-                  {step.id}
-                </p>
-                <h3 ref={titleRef} className="mt-3 text-[30px] font-semibold tracking-[-0.02em] text-foreground">
-                  {step.title}
-                </h3>
-                <p ref={descRef} className="mt-3 max-w-[420px] text-[16.5px] leading-7 text-muted-foreground">
-                  {step.description}
-                </p>
-              </div>
-              <div ref={sheetRef} className="min-w-0">
-                {step.artifact}
+            {/* Continuous Stacked Step Stage */}
+            <div className="workflow-stage mx-auto max-w-5xl pt-10" aria-live="polite">
+              <div className="workflow-stage-grid">
+                {STEPS.map((s, i) => (
+                  <div
+                    key={s.id}
+                    ref={(el) => {
+                      stepPanesRef.current[i] = el;
+                    }}
+                    className="workflow-step-pane"
+                  >
+                    <div className="min-w-0">
+                      <p className="workflow-number" aria-hidden="true">
+                        {s.id}
+                      </p>
+                      <h3 className="mt-3 text-[30px] font-semibold tracking-[-0.02em] text-foreground">
+                        {s.title}
+                      </h3>
+                      <p className="mt-3 max-w-[420px] text-[16.5px] leading-7 text-muted-foreground">
+                        {s.description}
+                      </p>
+                    </div>
+                    <div className="min-w-0">
+                      {s.artifact}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 

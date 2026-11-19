@@ -225,7 +225,32 @@
 }
 
 .workflow-stage {
-  min-height: 260px;
+  min-height: 280px;
+  position: relative;
+}
+
+.workflow-stage-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  min-height: 300px;
+  position: relative;
+  width: 100%;
+}
+
+.workflow-step-pane {
+  grid-area: 1 / 1;
+  display: grid;
+  gap: 2rem;
+  align-items: start;
+  width: 100%;
+  will-change: transform, opacity;
+}
+
+@media (min-width: 768px) {
+  .workflow-step-pane {
+    grid-template-columns: 1.05fr 1fr;
+  }
 }
 
 .workflow-number {
