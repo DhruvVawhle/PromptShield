@@ -22,7 +22,11 @@ export interface AuthResult {
 export async function signInWithCredentials(values: AuthSubmitValues): Promise<AuthResult> {
   const auth = getFirebaseAuth();
   const credential = await signInWithEmailAndPassword(auth, values.email.trim(), values.password);
-  await credential.user.getIdToken();
+  try {
+    await credential.user.getIdToken();
+  } catch {
+    // Non-fatal prefetch
+  }
   return { ok: true, redirectTo: "/dashboard" };
 }
 
@@ -34,9 +38,10 @@ export async function signUpWithCredentials(values: AuthSubmitValues): Promise<A
     await updateProfile(credential.user, { displayName }).catch(() => {});
   }
   try {
-    await credential.user.reload();
-  } catch {}
-  await credential.user.getIdToken();
+    await credential.user.getIdToken();
+  } catch {
+    // Non-fatal prefetch
+  }
   return { ok: true, redirectTo: "/dashboard" };
 }
 
@@ -45,7 +50,14 @@ export type AuthProvider = "google" | "github";
 export async function signInWithProvider(provider: AuthProvider): Promise<AuthResult> {
   const auth = getFirebaseAuth();
   const firebaseProvider = provider === "google" ? new GoogleAuthProvider() : new GithubAuthProvider();
+  if (provider === "google") {
+    firebaseProvider.setCustomParameters({ prompt: "select_account" });
+  }
   const credential = await signInWithPopup(auth, firebaseProvider);
-  await credential.user.getIdToken();
+  try {
+    await credential.user.getIdToken();
+  } catch {
+    // Non-fatal prefetch
+  }
   return { ok: true, redirectTo: "/dashboard" };
 }
