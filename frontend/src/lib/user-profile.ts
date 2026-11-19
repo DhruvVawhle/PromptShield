@@ -107,9 +107,9 @@ export async function getOrCreateUserProfile(user: User): Promise<UserProfile> {
 
   let docSnap;
   try {
-    docSnap = await withTimeout(getDoc(userRef), 8000, "getDoc(users/{uid})");
+    docSnap = await withTimeout(getDoc(userRef), 2500, "getDoc(users/{uid})");
   } catch (error) {
-    if (classifyFirestoreError(error) === "offline") {
+    if (classifyFirestoreError(error) === "offline" || (error instanceof Error && error.message.includes("timed out"))) {
       return buildLocalProfile(user);
     }
     throw toProfileError(error);
@@ -118,7 +118,7 @@ export async function getOrCreateUserProfile(user: User): Promise<UserProfile> {
   if (docSnap.exists()) {
     const data = docSnap.data() as Omit<UserProfile, "createdAt" | "updatedAt">;
     try {
-      await withTimeout(setDoc(userRef, { updatedAt: serverTimestamp() }, { merge: true }), 8000, "setDoc(users/{uid})");
+      await withTimeout(setDoc(userRef, { updatedAt: serverTimestamp() }, { merge: true }), 2500, "setDoc(users/{uid})");
     } catch {}
     return { ...data, uid: user.uid, createdAt: docSnap.data().createdAt, updatedAt: docSnap.data().updatedAt };
   }
@@ -136,9 +136,9 @@ export async function getOrCreateUserProfile(user: User): Promise<UserProfile> {
   };
 
   try {
-    await withTimeout(setDoc(userRef, payload), 8000, "setDoc(users/{uid})");
+    await withTimeout(setDoc(userRef, payload), 2500, "setDoc(users/{uid})");
   } catch (error) {
-    if (classifyFirestoreError(error) === "offline") {
+    if (classifyFirestoreError(error) === "offline" || (error instanceof Error && error.message.includes("timed out"))) {
       return local;
     }
     throw toProfileError(error);

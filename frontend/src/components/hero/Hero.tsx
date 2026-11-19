@@ -1,12 +1,18 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { FileText, ShieldCheck, Settings } from "lucide-react";
 import { FlowButton } from "@/components/ui/flow-button";
-import AetherRibbonMesh from "@/components/ui/aether-ribbon-mesh";
-import GatewayFlow from "@/components/ui/gateway-flow";
 import { ProductPreview } from "./ProductPreview";
+
+const AetherRibbonMesh = dynamic(() => import("@/components/ui/aether-ribbon-mesh"), {
+  ssr: false,
+});
+const GatewayFlow = dynamic(() => import("@/components/ui/gateway-flow"), {
+  ssr: false,
+});
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
