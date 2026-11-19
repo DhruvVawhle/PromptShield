@@ -347,8 +347,8 @@ export function ProblemSection() {
                     "px-3.5 py-3 border-l-2 text-[14px] leading-snug shrink-0 overflow-hidden rounded-r-lg",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
                     active
-                      ? "problem-tab--active border-slate-900 bg-slate-900/[0.04] text-slate-950 font-semibold dark:border-blue-500 dark:bg-white/[0.06] dark:text-white"
-                      : "border-transparent text-slate-600 hover:text-slate-950 hover:bg-slate-100/70 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/[0.03] font-normal"
+                      ? "problem-tab--active border-slate-900 bg-slate-900/[0.04] text-slate-950 font-semibold dark:border-blue-500 dark:bg-blue-950/20 dark:text-white"
+                      : "border-transparent text-slate-600 hover:text-slate-950 hover:bg-slate-100/70 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/[0.03] font-normal"
                   )}
                 >
                   <span
@@ -356,13 +356,13 @@ export function ProblemSection() {
                       "problem-tab__label transition-colors",
                       active
                         ? "text-slate-950 dark:text-white font-semibold"
-                        : "text-slate-600 dark:text-slate-400 group-hover:text-slate-950 dark:group-hover:text-white font-medium"
+                        : "text-slate-600 dark:text-slate-300 group-hover:text-slate-950 dark:group-hover:text-white font-medium"
                     )}
                   >
                     {t.label}
                   </span>
                   {active ? (
-                    <span className="problem-tab__hint mt-1 block text-[13px] font-normal text-slate-600 dark:text-slate-300 leading-normal">
+                    <span className="problem-tab__hint mt-1 block text-[13px] font-normal text-slate-600 dark:text-blue-300 leading-normal">
                       {t.hint}
                     </span>
                   ) : null}

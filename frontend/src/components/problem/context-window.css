@@ -361,40 +361,60 @@
   position: relative;
   text-align: left;
   width: 100%;
+  color: #475569;
 }
 
-.dark .problem-tab {
-  color: #94a3b8;
+.problem-tab:hover {
+  color: #0f172a;
 }
 
-.dark .problem-tab:hover {
-  color: #ffffff;
+.problem-tab--active {
+  color: #0f172a !important;
+  border-left-color: #0f172a !important;
+  background: rgba(15, 23, 42, 0.04);
 }
 
-.dark .problem-tab--active {
+.problem-tab__label {
+  color: inherit;
+}
+
+.problem-tab__hint {
+  color: #64748b;
+}
+
+:is(.dark, [data-theme="dark"], html.dark) .problem-tab {
+  color: #cbd5e1 !important;
+}
+
+:is(.dark, [data-theme="dark"], html.dark) .problem-tab:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:is(.dark, [data-theme="dark"], html.dark) .problem-tab--active {
   color: #ffffff !important;
   border-left-color: #3b82f6 !important;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(59, 130, 246, 0.12) !important;
 }
 
-.dark .problem-tab__label {
-  color: #94a3b8;
+:is(.dark, [data-theme="dark"], html.dark) .problem-tab__label {
+  color: #cbd5e1 !important;
 }
 
-.dark .problem-tab:hover .problem-tab__label {
-  color: #ffffff;
+:is(.dark, [data-theme="dark"], html.dark) .problem-tab:hover .problem-tab__label {
+  color: #ffffff !important;
 }
 
-.dark .problem-tab--active .problem-tab__label {
+:is(.dark, [data-theme="dark"], html.dark) .problem-tab--active .problem-tab__label {
   color: #ffffff !important;
   font-weight: 600;
 }
 
-.dark .problem-tab__hint {
-  color: #cbd5e1 !important;
+:is(.dark, [data-theme="dark"], html.dark) .problem-tab__hint {
+  color: #93c5fd !important;
 }
 
-.dark .problem-tab__arrow {
+:is(.dark, [data-theme="dark"], html.dark) .problem-tab__arrow {
   color: #60a5fa !important;
 }
 
@@ -413,7 +433,7 @@
   pointer-events: none;
 }
 
-.dark .problem-tab::before {
+:is(.dark, [data-theme="dark"], html.dark) .problem-tab::before {
   background: #3b82f6;
 }
 
