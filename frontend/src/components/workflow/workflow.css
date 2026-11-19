@@ -242,6 +242,89 @@
   padding-bottom: 22px;
 }
 
+.dark .workflow-sheet {
+  background: var(--surface);
+  border-color: var(--border-default);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.dark .workflow-sheet__label {
+  color: var(--foreground-muted);
+}
+
+.dark .workflow-sheet__meta {
+  color: var(--foreground-secondary);
+}
+
+.dark .workflow-mono {
+  color: var(--foreground-primary);
+}
+
+.dark .workflow-sig {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fca5a5;
+  text-decoration-color: #ef4444;
+}
+
+.dark .workflow-risk-score {
+  color: var(--foreground-primary);
+}
+
+.dark .workflow-risk-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .workflow-redact {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-default);
+}
+
+.dark .workflow-redact__text {
+  color: var(--foreground-primary);
+}
+
+.dark .workflow-redact__bar {
+  background: #334155;
+}
+
+.dark .workflow-rail__line {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.dark .workflow-rail__fill {
+  background: #3b82f6;
+}
+
+.dark .workflow-node__dot {
+  border-color: #475569;
+  background: #0f172a;
+}
+
+.dark .workflow-node--past .workflow-node__dot {
+  border-color: #3b82f6;
+}
+
+.dark .workflow-node--active .workflow-node__dot {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.dark .workflow-node__label {
+  color: var(--foreground-muted);
+}
+
+.dark .workflow-node--active .workflow-node__label {
+  color: var(--foreground-primary);
+}
+
+.dark .workflow-number {
+  color: var(--foreground-primary);
+}
+
+.dark .workflow-mobile-item {
+  border-left-color: #3b82f6;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .workflow-pin-wrap {
     display: none !important;
