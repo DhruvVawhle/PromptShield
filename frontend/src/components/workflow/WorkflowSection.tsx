@@ -30,6 +30,7 @@ export function WorkflowSection() {
   const sheetRef = React.useRef<HTMLDivElement>(null);
   const stRef = React.useRef<ScrollTrigger | null>(null);
   const activeIndexRef = React.useRef(0);
+  const railWidthRef = React.useRef(0);
 
   const lenis = useLenis();
   const [mounted, setMounted] = React.useState(false);
@@ -42,13 +43,18 @@ export function WorkflowSection() {
 
   React.useEffect(() => {
     if (!mounted) return;
-    const onFontsReady = () => ScrollTrigger.refresh();
+    const updateMetrics = () => {
+      if (railRef.current) {
+        railWidthRef.current = railRef.current.clientWidth;
+      }
+      ScrollTrigger.refresh();
+    };
+    updateMetrics();
     if (document.fonts?.ready) {
-      document.fonts.ready.then(onFontsReady).catch(() => {});
+      document.fonts.ready.then(updateMetrics).catch(() => {});
     }
-    const onResize = () => ScrollTrigger.refresh();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.addEventListener("resize", updateMetrics);
+    return () => window.removeEventListener("resize", updateMetrics);
   }, [mounted]);
 
   React.useEffect(() => {
@@ -68,17 +74,22 @@ export function WorkflowSection() {
     if (!mounted) return;
     const mql = window.matchMedia("(min-width: 901px) and (prefers-reduced-motion: no-preference)");
     if (!mql.matches) return;
-    const candidates = [numberRef.current, titleRef.current, descRef.current, sheetRef.current] as (HTMLElement | null)[];
-    const els = candidates.filter((el): el is HTMLElement => el !== null);
-    if (els.length === 0) return;
-    const anim = gsap.fromTo(
-      els,
-      { y: 16, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.5, ease: "power3.out", stagger: 0.06, overwrite: true }
-    );
-    return () => {
-      anim.kill();
-    };
+    const candidates = [numberRef.current, titleRef.current, descRef.current] as (HTMLElement | null)[];
+    const textEls = candidates.filter((el): el is HTMLElement => el !== null);
+    if (textEls.length > 0) {
+      gsap.fromTo(
+        textEls,
+        { y: 6, opacity: 0.35 },
+        { y: 0, opacity: 1, duration: 0.22, ease: "power2.out", overwrite: "auto" }
+      );
+    }
+    if (sheetRef.current) {
+      gsap.fromTo(
+        sheetRef.current,
+        { opacity: 0.75, scale: 0.995 },
+        { opacity: 1, scale: 1, duration: 0.2, ease: "power2.out", overwrite: "auto" }
+      );
+    }
   }, [active, mounted]);
 
   const goTo = React.useCallback(
@@ -91,7 +102,7 @@ export function WorkflowSection() {
       const target = start + (end - start) * (index / (n - 1));
       const wrappedLenis = lenis as unknown as { scrollTo?: (t: number, o?: unknown) => void } | null;
       if (wrappedLenis?.scrollTo) {
-        wrappedLenis.scrollTo(target, { duration: 1 });
+        wrappedLenis.scrollTo(target, { duration: 0.8 });
       } else {
         window.scrollTo({ top: target, behavior: "smooth" });
       }
@@ -115,6 +126,7 @@ export function WorkflowSection() {
         const total = STEPS.length;
         if (fill) gsap.set(fill, { scaleX: 0 });
         if (packet) gsap.set(packet, { x: 0 });
+        if (rail) railWidthRef.current = rail.clientWidth;
 
         const st = ScrollTrigger.create({
           trigger: section,
@@ -122,24 +134,29 @@ export function WorkflowSection() {
           end: () => `+=${window.innerHeight * 3.4}`,
           pin: pinEl,
           pinSpacing: true,
-          scrub: 0.4,
-          snap: {
-            snapTo: 1 / (total - 1),
-            duration: { min: 0.2, max: 0.5 },
-            delay: 0.08,
-            ease: "power1.inOut",
-          },
+          scrub: true,
           onUpdate: (self) => {
             const p = self.progress;
             if (fill) gsap.set(fill, { scaleX: p });
             if (packet) {
-              const w = rail.clientWidth;
+              const w = railWidthRef.current || rail.clientWidth;
               gsap.set(packet, { x: p * w });
             }
-            const idx = Math.round(p * (total - 1));
-            if (idx !== activeIndexRef.current) {
-              activeIndexRef.current = idx;
-              setActive(idx);
+            const rawIdx = p * (total - 1);
+            const current = activeIndexRef.current;
+            let nextIdx = current;
+            if (p <= 0.02) {
+              nextIdx = 0;
+            } else if (p >= 0.98) {
+              nextIdx = total - 1;
+            } else if (rawIdx > current + 0.55 && current < total - 1) {
+              nextIdx = Math.min(total - 1, Math.floor(rawIdx + 0.45));
+            } else if (rawIdx < current - 0.55 && current > 0) {
+              nextIdx = Math.max(0, Math.ceil(rawIdx - 0.45));
+            }
+            if (nextIdx !== current) {
+              activeIndexRef.current = nextIdx;
+              setActive(nextIdx);
             }
           },
         });

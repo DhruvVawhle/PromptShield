@@ -363,6 +363,41 @@
   width: 100%;
 }
 
+.dark .problem-tab {
+  color: #94a3b8;
+}
+
+.dark .problem-tab:hover {
+  color: #ffffff;
+}
+
+.dark .problem-tab--active {
+  color: #ffffff !important;
+  border-left-color: #3b82f6 !important;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dark .problem-tab__label {
+  color: #94a3b8;
+}
+
+.dark .problem-tab:hover .problem-tab__label {
+  color: #ffffff;
+}
+
+.dark .problem-tab--active .problem-tab__label {
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.dark .problem-tab__hint {
+  color: #cbd5e1 !important;
+}
+
+.dark .problem-tab__arrow {
+  color: #60a5fa !important;
+}
+
 .problem-tab::before {
   content: "";
   position: absolute;
