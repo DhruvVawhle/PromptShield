@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       prompt?: string;
       model?: string;
       provider?: string;
+      search?: boolean;
       messages?: Array<{ role?: string; content?: string }>;
     };
 
@@ -83,6 +84,25 @@ export async function POST(request: Request) {
       finalPrompt = analysisResult.sanitizedPrompt;
     }
 
+    // Phase 2.5: Real-time Internet Web Search Grounding
+    // Automatically triggers if search is requested OR if recency/live-data keywords are detected
+    const { isCurrentDataQuery } = await import("@/lib/server/providers/hybrid-provider");
+    const shouldSearch = body.search === true || isCurrentDataQuery(finalPrompt);
+
+    let searchResultCount = 0;
+    if (shouldSearch) {
+      try {
+        const { performWebSearch, buildSearchAugmentedPrompt } = await import("@/lib/server/web-search");
+        const searchResults = await performWebSearch(finalPrompt);
+        if (searchResults.length > 0) {
+          searchResultCount = searchResults.length;
+          finalPrompt = buildSearchAugmentedPrompt(finalPrompt, searchResults);
+        }
+      } catch (searchErr) {
+        console.warn("[WebSearch] Search retrieval failed, falling back to direct model knowledge:", searchErr);
+      }
+    }
+
     // Phase 3: Invoke Modular AI Provider (Hybrid Groq + Gemini Engine)
     const { getProvider } = await import("@/lib/server/providers");
     const provider = getProvider(body.provider);
@@ -113,13 +133,17 @@ export async function POST(request: Request) {
     if (analysisResult.decision === "SANITIZE" && analysisResult.sanitizedPrompt) {
       responseHeaders.set("X-Sanitized-Prompt", encodeURIComponent(analysisResult.sanitizedPrompt));
     }
+    if (searchResultCount > 0) {
+      responseHeaders.set("X-Web-Search", "enabled");
+      responseHeaders.set("X-Web-Search-Results", searchResultCount.toString());
+    }
     if (!responseHeaders.has("X-AI-Provider")) {
       responseHeaders.set("X-AI-Provider", provider.name || "AI Engine");
     }
     responseHeaders.set("X-Response-Time-Ms", latencyMs.toString());
     responseHeaders.set(
       "Access-Control-Expose-Headers",
-      "X-Security-Decision, X-Security-Risk-Score, X-Security-Risk-Level, X-Security-Policy, X-Security-Categories, X-Sanitized-Prompt, X-AI-Provider, X-AI-Model, X-AI-Routing-Reason, X-Response-Time-Ms"
+      "X-Security-Decision, X-Security-Risk-Score, X-Security-Risk-Level, X-Security-Policy, X-Security-Categories, X-Sanitized-Prompt, X-AI-Provider, X-AI-Model, X-AI-Routing-Reason, X-Response-Time-Ms, X-Web-Search, X-Web-Search-Results"
     );
 
     return new Response(providerResponse.body, {

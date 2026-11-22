@@ -42,6 +42,8 @@ export interface SecurityInspection {
   model?: string;
   routingReason?: string;
   reasoning?: string;
+  webSearchEnabled?: boolean;
+  webSearchResults?: number;
 }
 
 export type Message = {
@@ -59,6 +61,7 @@ export function ChatClient() {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [draft, setDraft] = React.useState("");
   const [selectedProvider, setSelectedProvider] = React.useState<"hybrid" | "gemini" | "groq">("hybrid");
+  const [webSearchEnabled, setWebSearchEnabled] = React.useState(true);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [activeAssistantId, setActiveAssistantId] = React.useState<string | null>(null);
   const [expandedInspectionId, setExpandedInspectionId] = React.useState<string | null>(null);
@@ -121,7 +124,7 @@ export function ChatClient() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ prompt: trimmed, provider: selectedProvider }),
+        body: JSON.stringify({ prompt: trimmed, provider: selectedProvider, search: webSearchEnabled }),
       });
 
       if (!res.ok) {
@@ -175,6 +178,8 @@ export function ChatClient() {
           : "PromptShield Hybrid Gateway");
       const modelHeader = res.headers.get("X-AI-Model") || undefined;
       const routingReason = res.headers.get("X-AI-Routing-Reason") || undefined;
+      const webSearchActive = res.headers.get("X-Web-Search") === "enabled";
+      const webSearchResults = parseInt(res.headers.get("X-Web-Search-Results") || "0", 10);
       const serverLatency = parseInt(res.headers.get("X-Response-Time-Ms") || "0", 10);
       const latencyMs = serverLatency > 0 ? serverLatency : Date.now() - startTime;
 
@@ -189,6 +194,8 @@ export function ChatClient() {
         provider: providerHeader,
         model: modelHeader,
         routingReason,
+        webSearchEnabled: webSearchActive,
+        webSearchResults: webSearchResults > 0 ? webSearchResults : undefined,
       };
 
       const notice =
@@ -469,6 +476,17 @@ export function ChatClient() {
                                 )}
                               </span>
 
+                              {/* Web Search Grounded Tag */}
+                              {msg.inspection.webSearchEnabled && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md border border-blue-500/30">
+                                  <Globe className="h-3 w-3 text-blue-500" />
+                                  <span>Web Search</span>
+                                  {msg.inspection.webSearchResults ? (
+                                    <span className="text-muted-foreground font-normal ml-0.5">({msg.inspection.webSearchResults} sources)</span>
+                                  ) : null}
+                                </span>
+                              )}
+
                               {/* Latency Tag */}
                               {msg.inspection.latencyMs > 0 && (
                                 <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80">
@@ -559,6 +577,14 @@ export function ChatClient() {
                                   </span>
                                 </div>
                               )}
+                              {msg.inspection.webSearchEnabled && (
+                                <div>
+                                  <span className="text-muted-foreground">Internet Search:</span>{" "}
+                                  <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                    Active (Live web grounding enabled)
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
                             {msg.inspection.sanitizedPrompt && (
@@ -622,51 +648,70 @@ export function ChatClient() {
 
             {/* Composer */}
             <div className="p-4 bg-card border-t border-border flex flex-col gap-2.5">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 text-primary" /> Active Engine:
-                </span>
-                <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-border/50 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProvider("hybrid")}
-                    className={cn(
-                      "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
-                      selectedProvider === "hybrid"
-                        ? "bg-card text-foreground shadow-xs border border-border/60"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title="Auto-routes: Gemini for real-time recency, Groq for sub-second LPU inference"
-                  >
-                    <Sparkles className="h-3 w-3 text-primary" /> Auto Hybrid
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProvider("gemini")}
-                    className={cn(
-                      "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
-                      selectedProvider === "gemini"
-                        ? "bg-card text-foreground shadow-xs border border-border/60"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title="Google Gemini: Up-to-date real-time world knowledge (gemini-3-flash-preview)"
-                  >
-                    <Globe className="h-3 w-3 text-blue-500" /> Gemini 3 Flash
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProvider("groq")}
-                    className={cn(
-                      "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
-                      selectedProvider === "groq"
-                        ? "bg-card text-foreground shadow-xs border border-border/60"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title="Groq: Ultra-low latency LPU inference"
-                  >
-                    <Zap className="h-3 w-3 text-amber-500" /> Groq LPU
-                  </button>
+              <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-primary" /> Active Engine:
+                  </span>
+                  <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-border/50 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProvider("hybrid")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
+                        selectedProvider === "hybrid"
+                          ? "bg-card text-foreground shadow-xs border border-border/60"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      title="Auto-routes: Gemini for real-time recency, Groq for sub-second LPU inference"
+                    >
+                      <Sparkles className="h-3 w-3 text-primary" /> Auto Hybrid
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProvider("gemini")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
+                        selectedProvider === "gemini"
+                          ? "bg-card text-foreground shadow-xs border border-border/60"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      title="Google Gemini: Up-to-date real-time world knowledge (gemini-3-flash-preview)"
+                    >
+                      <Globe className="h-3 w-3 text-blue-500" /> Gemini 3 Flash
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProvider("groq")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
+                        selectedProvider === "groq"
+                          ? "bg-card text-foreground shadow-xs border border-border/60"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      title="Groq: Ultra-low latency LPU inference"
+                    >
+                      <Zap className="h-3 w-3 text-amber-500" /> Groq LPU
+                    </button>
+                  </div>
                 </div>
+
+                {/* Live Web Search Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1.5 border shadow-2xs",
+                    webSearchEnabled
+                      ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 font-semibold"
+                      : "bg-muted/30 border-border/60 text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Search the live internet for current events, upcoming releases, and real-time facts"
+                >
+                  <Globe className="h-3 w-3 text-blue-500" />
+                  <span>Internet Search:</span>
+                  <span className="font-bold text-[10px]">{webSearchEnabled ? "ON" : "OFF"}</span>
+                </button>
               </div>
 
               {!user && (

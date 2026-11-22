@@ -16,6 +16,7 @@ Featuring a **Hybrid Multi-Provider AI Gateway**, PromptShield intelligently com
 | **Detect** | Threat Intelligence | Multi-category detection covering direct prompt injection, jailbreaks, system prompt extraction, persona hijacking, credential probing, and evasion with suffix-stripped stem matching. |
 | **Track** | Full Prompt Auditing & Tracking | Real-time preservation of user prompts across Cloud Firestore, Dashboard Recent Events, and Incident Triage with one-click re-analysis, while stripping credentials via `redactSensitiveContent`. |
 | **Enforce** | Guardrail Policies | Strictest-action-wins deterministic precedence engine with customizable risk thresholds and action overrides (`BLOCK`, `SANITIZE`, `WARN`, `ALLOW`). |
+| **Search** | Real-Time Web Search Grounding | Zero-dependency real-time internet search engine (`web-search.ts`) with dual-engine fallback (DuckDuckGo HTML parser + Wikipedia Search API), automated recency query detection, interactive chat toggle, and grounded temporal context (anchoring to current year 2026). |
 | **Gateway** | Hybrid Multi-Provider Routing | Intelligent router directing real-time/current data queries to Google Gemini (`gemini-3-flash-preview` at ~1.7s) and low-latency reasoning tasks to Groq (`qwen/qwen3.8-27b` at 460ms or `openai/gpt-oss-120b` at 1.3s), with transparent failover and rich in-chat telemetry headers. |
 | **Chat** | AI Security Assistant | Real-time gated chat interface featuring in-chat security telemetry: decision badges (`ALLOW`, `WARN`, `SANITIZE`, `BLOCK`), live risk scoring (0-100), provider attribution, execution latency, and expandable telemetry drawers detailing enforced policies, inspected threat categories, and sanitized forwarding diffs. |
 | **Audit** | Immutable Audit Trail | Automatic, tamper-resistant audit logging for policy mutations, security decisions, unauthorized access attempts, and incident triaging with RFC 8785 canonical JSON and HMAC-SHA256 hash chaining. |
@@ -82,6 +83,7 @@ PromptShield/
 │   │       │   ├── system-status.ts
 │   │       │   ├── rate-limiter.ts
 │   │       │   ├── rbac.ts
+│   │       │   ├── web-search.ts  # Zero-dependency live web search grounding (DuckDuckGo + Wikipedia)
 │   │       │   └── providers/ # Modular Multi-Provider Architecture
 │   │       │       ├── provider-interface.ts
 │   │       │       ├── gemini-provider.ts
@@ -200,6 +202,7 @@ Reports process liveness and bounded dependency readiness probes (`≤ 3000ms` t
 #### `POST /api/ai`
 Proxies validated prompts through the **PromptShield Hybrid Gateway**:
 - **Automatic Routing:** Routes real-time, current-affairs, and entertainment queries (e.g. *upcoming releases, live events, sports, elections, prices*) to **Google Gemini** (`gemini-3-flash-preview` at ~1.7s, avoiding 503 high-demand load spikes). Routes fast reasoning, code analysis, and standard Q&A to **Groq LPUs** (`qwen/qwen3.8-27b` at 460ms or `openai/gpt-oss-120b` at 1.3s).
+- **Live Internet Web Search Grounding:** Supports zero-dependency real-time internet search grounding (`web-search.ts`). When callers pass `"search": true` (or when recency queries are auto-detected), the gateway queries DuckDuckGo and Wikipedia with a strict 3.5s timeout, parsing and injecting up-to-date web snippets into the model prompt anchored to the current year (2026).
 - **Provider Override:** Callers can explicitly specify `"provider": "gemini"`, `"provider": "groq"`, or `"provider": "hybrid"`.
 - **Pre-Execution Enforcement:** Prompts evaluated as `BLOCK` terminate immediately (`403 Forbidden`) and never reach any provider. Prompts evaluated as `SANITIZE` pass only stripped safe text.
 - **Fail-Closed Resilience:** Fails closed (`502` / `429`) if rate limits or persistence checks fail.
@@ -213,6 +216,8 @@ Proxies validated prompts through the **PromptShield Hybrid Gateway**:
   - `X-AI-Provider`: Attribution string (e.g., `Hybrid (Google Gemini)`, `Groq LPU Inference Engine`)
   - `X-AI-Model`: Active model utilized for inference
   - `X-AI-Routing-Reason`: Reason for routing choice (`recency_detected`, `low_latency_default`, `failover`)
+  - `X-Web-Search`: `enabled` when live search grounding was performed
+  - `X-Web-Search-Results`: Number of live search snippets injected
   - `X-Response-Time-Ms`: Round-trip execution latency in milliseconds
 
 ---
@@ -304,7 +309,7 @@ Open **http://localhost:3000** in your browser.
 
 ## 🧪 Testing & Verification
 
-PromptShield includes an extensive, zero-mock/high-fidelity automated test suite validating the entire security architecture across 13 test files and 19 test suites:
+PromptShield includes an extensive, zero-mock/high-fidelity automated test suite validating the entire security architecture across 14 test files and 20 test suites:
 
 | Test File | Test Suite Focus | Test Cases |
 |:---|:---|:---:|
@@ -321,12 +326,13 @@ PromptShield includes an extensive, zero-mock/high-fidelity automated test suite
 | `rbac.test.ts` | 4 Role tiers (SUPER_ADMIN, ADMIN, SECURITY_ANALYST, VIEWER), privilege escalation prevention, cross-tenant IDOR | 10 |
 | `security-engine.test.ts` | Core normalization, morphological stemmer, 11 attack categories, heuristic scoring, edge cases | 38 |
 | `system-status.test.ts` | Multi-dependency health diagnostics (database, cache, AI provider, engine), TTL caching, timeout handling | 8 |
-| **Total** | **13 Test Files · 19 Test Suites · 0 Skipped · 0 Duplicated** | **168** |
+| `web-search.test.ts` | Real-time web search grounding: HTML snippet extraction, search augmentation formatting, current year anchoring, network failure resilience | 5 |
+| **Total** | **14 Test Files · 20 Test Suites · 0 Skipped · 0 Duplicated** | **173** |
 
 ### Running Synchronous Quality Gates
 
 ```bash
-# 1. Run all 168 automated tests synchronously
+# 1. Run all 173 automated tests synchronously
 npm test
 
 # 2. Run TypeScript strict type-check (0 errors)
