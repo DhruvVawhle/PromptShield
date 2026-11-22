@@ -8,6 +8,17 @@ import type { AIProviderAdapter, CompletionOptions, CompletionResult } from "./p
 
 const FALLBACK_MODELS = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash", "gemini-flash-lite-latest"];
 
+export function getTemporalGroundingPrompt(): string {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  return `You are PromptShield's AI Security Assistant. Today's date is ${dateStr} (Current Year: ${now.getFullYear()}). When answering questions about upcoming movies, entertainment releases, technology launches, current events, or dates, always ground your answers relative to today's date (${dateStr}) and the current year (${now.getFullYear()}). Never present past years (such as 2024 or earlier) as upcoming or current.`;
+}
+
 export class GeminiProvider implements AIProviderAdapter {
   readonly id = "gemini";
   readonly name = "Google Gemini (Real-time Knowledge)";
@@ -50,6 +61,9 @@ export class GeminiProvider implements AIProviderAdapter {
             Accept: "application/json",
           },
           body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: getTemporalGroundingPrompt() }],
+            },
             contents: [
               {
                 role: "user",
@@ -160,6 +174,9 @@ export class GeminiProvider implements AIProviderAdapter {
             Accept: "application/json",
           },
           body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: getTemporalGroundingPrompt() }],
+            },
             contents: [
               {
                 role: "user",

@@ -1,5 +1,6 @@
 import { getGroqChatUrl, getGroqConfig, getSafeGroqMessage } from "@/lib/groq";
 import type { AIProviderAdapter, CompletionOptions, CompletionResult } from "./provider-interface";
+import { getTemporalGroundingPrompt } from "./gemini-provider";
 
 export class GroqProvider implements AIProviderAdapter {
   readonly id = "groq";
@@ -29,7 +30,10 @@ export class GroqProvider implements AIProviderAdapter {
         },
         body: JSON.stringify({
           model: mod,
-          messages: [{ role: "user", content: prompt }],
+          messages: [
+            { role: "system", content: getTemporalGroundingPrompt() },
+            { role: "user", content: prompt },
+          ],
           temperature: options.temperature ?? 0.2,
           stream: false,
         }),
@@ -100,7 +104,10 @@ export class GroqProvider implements AIProviderAdapter {
         },
         body: JSON.stringify({
           model: mod,
-          messages: [{ role: "user", content: prompt }],
+          messages: [
+            { role: "system", content: getTemporalGroundingPrompt() },
+            { role: "user", content: prompt },
+          ],
           temperature: options.temperature ?? 0.2,
           stream: true,
         }),
