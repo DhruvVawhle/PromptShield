@@ -9,11 +9,7 @@ process.env.GROQ_API_KEY = "test-key";
 process.env.OMNIROUTE_API_KEY = "test-key";
 
 import { POST as aiGatewayPOST } from "@/app/api/ai/route";
-import * as omniroute from "@/lib/omniroute";
 import { adminAuth } from "@/lib/firebase-admin";
-
-import * as persistence from "@/lib/server/persistence";
-import { Ratelimit } from "@upstash/ratelimit";
 
 // Intercept adminAuth
 mock.method(adminAuth, "verifyIdToken", async (token: string) => {
@@ -40,11 +36,10 @@ mock.method(adminDb, "collection", () => mockCollection);
 // Removed Ratelimit prototype mock since it fails
 
 describe("Phase 2 Integration - /api/ai", () => {
-  let originalFetch: typeof global.fetch;
   let fetchMock: any;
+  const originalFetch = global.fetch;
 
   beforeEach(() => {
-    originalFetch = global.fetch;
     fetchMock = mock.fn(async () => {
       return {
         ok: true,

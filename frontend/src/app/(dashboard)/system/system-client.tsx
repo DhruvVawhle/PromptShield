@@ -9,11 +9,8 @@ import {
   Zap,
   Server,
   AlertTriangle,
-  CheckCircle2,
-  XCircle,
   Clock,
   Cpu,
-  Info,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Panel } from "@/components/ui/panel";
@@ -88,7 +85,9 @@ export function SystemClient() {
 
   React.useEffect(() => {
     if (authLoading || !user) return;
-    void loadStatus(false);
+    queueMicrotask(() => {
+      void loadStatus(false);
+    });
   }, [user, authLoading, loadStatus]);
 
   if (authLoading) {

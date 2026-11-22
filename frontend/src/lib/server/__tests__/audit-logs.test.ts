@@ -2,7 +2,7 @@ process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "test-project";
 process.env.FIREBASE_CLIENT_EMAIL = "test@test.com";
 process.env.FIREBASE_PRIVATE_KEY = "test-key";
 
-import test, { mock, beforeEach } from "node:test";
+import test, { describe, mock, beforeEach } from "node:test";
 import assert from "node:assert";
 import { GET } from "@/app/api/v1/audit-logs/route";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
@@ -150,7 +150,8 @@ beforeEach(() => {
   ];
 });
 
-// 1. Authentication Tests
+describe("Audit Logs API & Verification", () => {
+  // 1. Authentication Tests
 test("Audit Log API - Missing Authorization header returns 401", async () => {
   const req = new Request("https://test/api/v1/audit-logs", { method: "GET" });
   const res = await GET(req);
@@ -378,4 +379,5 @@ test("Audit Log API - Redacts sensitive credentials in audit log details", async
     "[REDACTED_CREDENTIAL]",
     "Password field must be redacted"
   );
+});
 });

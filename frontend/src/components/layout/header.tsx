@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { Bell, Menu, Moon, Search, SunMedium, LogOut, User, Settings, ChevronDown, LayoutDashboard, ChevronRight } from "lucide-react"
 import { useTheme } from "next-themes"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -35,11 +35,10 @@ const appNavItems = [
 ]
 
 export function Header() {
-  const { setTheme, theme, resolvedTheme } = useTheme()
+  const { setTheme, resolvedTheme } = useTheme()
   const isDark = resolvedTheme === "dark"
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { user, profile, profileLoading } = useAuth()
   const { signOut } = useAuth()
 

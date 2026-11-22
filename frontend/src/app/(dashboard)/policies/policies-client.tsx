@@ -64,12 +64,16 @@ export function PoliciesClient() {
   React.useEffect(() => {
     if (authLoading) return;
     if (!user?.uid) {
-      setPolicies([]);
-      setLoading(false);
+      queueMicrotask(() => {
+        setPolicies([]);
+        setLoading(false);
+      });
       return;
     }
 
-    setLoading(true);
+    queueMicrotask(() => {
+      setLoading(true);
+    });
     let cancelled = false;
 
     const unsubscribe = subscribePolicies(
@@ -208,13 +212,16 @@ export function PoliciesClient() {
   const [recentlyUpdatedCount, setRecentlyUpdatedCount] = React.useState(0);
 
   React.useEffect(() => {
-    const now = Date.now();
-    const count = policies.filter(p => {
-      const d = p.updatedAt?.toDate ? p.updatedAt.toDate() : new Date(String(p.updatedAt));
-      const diffDays = (now - d.getTime()) / (1000 * 3600 * 24);
-      return diffDays <= 7;
-    }).length;
-    setRecentlyUpdatedCount(count);
+    const timer = setTimeout(() => {
+      const now = Date.now();
+      const count = policies.filter((p) => {
+        const d = p.updatedAt?.toDate ? p.updatedAt.toDate() : new Date(String(p.updatedAt));
+        const diffDays = (now - d.getTime()) / (1000 * 3600 * 24);
+        return diffDays <= 7;
+      }).length;
+      setRecentlyUpdatedCount(count);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [policies]);
 
   const isGuardrailsActive = activeCount > 0;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { authenticateAndAuthorize } from "@/lib/server/rbac";
 import { VALID_INCIDENT_STATUSES, type IncidentStatus } from "@/lib/incidents";
 import { redactSensitiveContent } from "@/lib/server/persistence";
 import { logAudit } from "@/lib/server/audit";
@@ -22,8 +23,8 @@ function formatIncidentDoc(id: string, data: Record<string, any>) {
   const categories = Array.isArray(data.categories)
     ? data.categories
     : data.threatCategory
-    ? [data.threatCategory]
-    : [];
+      ? [data.threatCategory]
+      : [];
 
   const timestampStr =
     typeof data.timestamp === "string"
@@ -57,27 +58,12 @@ export async function GET(
   try {
     const { id } = await context.params;
 
-    // 1. Authenticate Request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Missing or invalid authorization token" },
-        { status: 401 }
-      );
+    // 1. Authenticate & Authorize Request
+    const authResult = await authenticateAndAuthorize(req, "incidents:read");
+    if ("errorResponse" in authResult) {
+      return authResult.errorResponse;
     }
-
-    const token = authHeader.split("Bearer ")[1];
-    let decodedToken;
-    try {
-      decodedToken = await adminAuth.verifyIdToken(token, true);
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid or expired authentication token" },
-        { status: 401 }
-      );
-    }
-
-    const uid = decodedToken.uid;
+    const uid = authResult.uid;
 
     // 2. Fetch Incident Record
     const docRef = adminDb.collection("security_events").doc(id);
@@ -91,7 +77,10 @@ export async function GET(
     }
 
     const docData = docSnap.data();
-    if (!docData || docData.uid !== uid) {
+    const docTenant = docData?.tenantId || docData?.uid;
+    const isIncidentOwner = docData && (docData.uid === uid || docTenant === authResult.tenantId);
+
+    if (!docData || !isIncidentOwner) {
       // IDOR protection: return uniform 404
       return NextResponse.json(
         { error: "Incident not found" },
@@ -118,27 +107,12 @@ export async function PATCH(
   try {
     const { id } = await context.params;
 
-    // 1. Authenticate Request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Missing or invalid authorization token" },
-        { status: 401 }
-      );
+    // 1. Authenticate & Authorize Request
+    const authResult = await authenticateAndAuthorize(req, "incidents:manage");
+    if ("errorResponse" in authResult) {
+      return authResult.errorResponse;
     }
-
-    const token = authHeader.split("Bearer ")[1];
-    let decodedToken;
-    try {
-      decodedToken = await adminAuth.verifyIdToken(token, true);
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid or expired authentication token" },
-        { status: 401 }
-      );
-    }
-
-    const uid = decodedToken.uid;
+    const uid = authResult.uid;
 
     // 2. Parse & Validate Payload
     let body: any;
@@ -207,7 +181,10 @@ export async function PATCH(
     }
 
     const docData = docSnap.data();
-    if (!docData || docData.uid !== uid) {
+    const docTenant = docData?.tenantId || docData?.uid;
+    const isIncidentOwner = docData && (docData.uid === uid || docTenant === authResult.tenantId);
+
+    if (!docData || !isIncidentOwner) {
       // IDOR protection: return uniform 404
       return NextResponse.json(
         { error: "Incident not found" },

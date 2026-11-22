@@ -38,7 +38,7 @@ if (!getApps().length) {
 
 const createServiceProxy = <T extends object>(serviceName: string): T => {
   return new Proxy({} as T, {
-    get: (_, prop) => {
+    get: () => {
       throw new Error(`Firebase Admin ${serviceName} is not initialized. Please ensure GCP credentials (ADC) are configured.`);
     },
   });
@@ -94,11 +94,11 @@ class MemoryCollection {
 
   doc(id?: string) {
     const docId = id || crypto.randomUUID();
-    const self = this;
+    const docsMap = this.docs;
     return {
       id: docId,
       async get() {
-        const data = self.docs.get(docId);
+        const data = docsMap.get(docId);
         return {
           exists: data !== undefined,
           id: docId,
@@ -106,20 +106,20 @@ class MemoryCollection {
         };
       },
       async set(data: Record<string, any>, options?: { merge?: boolean }) {
-        if (options?.merge && self.docs.has(docId)) {
-          self.docs.set(docId, { ...self.docs.get(docId), ...data });
+        if (options?.merge && docsMap.has(docId)) {
+          docsMap.set(docId, { ...docsMap.get(docId), ...data });
         } else {
-          self.docs.set(docId, { ...data });
+          docsMap.set(docId, { ...data });
         }
       },
       async update(data: Record<string, any>) {
-        if (!self.docs.has(docId)) {
+        if (!docsMap.has(docId)) {
           throw new Error(`Document ${docId} does not exist.`);
         }
-        self.docs.set(docId, { ...self.docs.get(docId), ...data });
+        docsMap.set(docId, { ...docsMap.get(docId), ...data });
       },
       async delete() {
-        self.docs.delete(docId);
+        docsMap.delete(docId);
       },
     };
   }

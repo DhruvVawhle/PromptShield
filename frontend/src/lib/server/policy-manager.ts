@@ -58,12 +58,20 @@ export async function getActivePolicyForUser(uid: string): Promise<GuardrailPoli
     id: "custom-" + uid,
     name: "Custom User Policy",
     maxRiskForAllow: DEFAULT_GUARDRAIL_POLICY.maxRiskForAllow,
+    allowSanitization: DEFAULT_GUARDRAIL_POLICY.allowSanitization,
     customCategoryActions: { ...DEFAULT_GUARDRAIL_POLICY.customCategoryActions }
   };
 
   for (const doc of sortedDocs) {
     const data = doc.data();
     const action = data.action;
+
+    if (data.allowSanitization !== undefined) {
+      combinedPolicy.allowSanitization = Boolean(data.allowSanitization);
+    }
+    if (action === "SANITIZE") {
+      combinedPolicy.allowSanitization = true;
+    }
 
     // Validate action is supported
     if (!action || !(action in ACTION_SEVERITY)) {

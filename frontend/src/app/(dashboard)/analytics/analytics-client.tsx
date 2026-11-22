@@ -12,7 +12,6 @@ import {
   getPeriodDateRange,
   computeDashboardStats,
   buildThreatsOverTime,
-  buildDecisionsOverTime,
   buildThreatCategories,
   formatRelativeTime,
   type SecurityEventWithId,
@@ -116,7 +115,6 @@ export function AnalyticsClient() {
 
   const stats = React.useMemo(() => computeDashboardStats(events), [events]);
   const threatsOverTime = React.useMemo(() => buildThreatsOverTime(events, period), [events, period]);
-  const decisionsOverTime = React.useMemo(() => buildDecisionsOverTime(events, period), [events, period]);
   const threatCategories = React.useMemo(() => buildThreatCategories(events), [events]);
   
   const blockRate = stats.totalAnalyzed > 0 

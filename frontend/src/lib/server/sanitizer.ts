@@ -22,6 +22,11 @@ const STRIP_PATTERNS: ReadonlyArray<RegExp> = [
 
   // Direct extraction clauses
   /(?:and\s+)?(?:reveal|show|print|leak|extract|dump)\s+(?:the\s+|your\s+)?(?:system\s+prompt|developer\s+prompt|initial\s+instructions|api[_\s]?key|secret[_\s]?key|password)[.!?,\s]*/gi,
+
+  // Indirect injection context frames & comment markers
+  /<!--\s*(?:system|admin|evaluator)\s*[:=][^>]+-->/gi,
+  /\[\/\/\s*\]:\s*#\s*\((?:system|admin|override)\s*[:=][^)]+\)/gi,
+  /<\/?(?:system|instruction|prompt_context|developer_mode)>/gi,
 ];
 
 /**

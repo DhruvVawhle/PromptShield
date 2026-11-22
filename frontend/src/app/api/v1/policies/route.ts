@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { authenticateAndAuthorize } from "@/lib/server/rbac";
 import { logAudit } from "@/lib/server/audit";
 
 const VALID_ACTIONS = ["BLOCK", "SANITIZE", "WARN", "ALLOW"];
@@ -13,29 +14,9 @@ const VALID_CATEGORIES = [
   "Custom",
 ];
 
-async function authenticateRequest(req: Request): Promise<{ uid: string } | { errorResponse: NextResponse }> {
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return { errorResponse: NextResponse.json({ error: "Missing or invalid token" }, { status: 401 }) };
-  }
-
-  const token = authHeader.split("Bearer ")[1];
-  try {
-    const decodedToken = await adminAuth.verifyIdToken(token, true);
-    return { uid: decodedToken.uid };
-  } catch (err) {
-    return {
-      errorResponse: NextResponse.json(
-        { error: "Invalid or expired authentication token" },
-        { status: 401 }
-      ),
-    };
-  }
-}
-
 export async function GET(req: Request) {
   try {
-    const authResult = await authenticateRequest(req);
+    const authResult = await authenticateAndAuthorize(req, "policies:read");
     if ("errorResponse" in authResult) {
       return authResult.errorResponse;
     }
@@ -60,7 +41,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const authResult = await authenticateRequest(req);
+    const authResult = await authenticateAndAuthorize(req, "policies:manage");
     if ("errorResponse" in authResult) {
       return authResult.errorResponse;
     }
@@ -116,6 +97,7 @@ export async function POST(req: Request) {
 
     const newPolicy = {
       uid,
+      tenantId: authResult.tenantId,
       name: body.name.trim(),
       description: typeof body.description === "string" ? body.description.trim() : "",
       category: body.category || "Custom",

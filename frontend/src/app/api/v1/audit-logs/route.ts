@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
-import { VALID_AUDIT_ACTIONS, type AuditAction } from "@/lib/server/audit";
+import { adminDb } from "@/lib/firebase-admin";
+import { authenticateAndAuthorize } from "@/lib/server/rbac";
+import { VALID_AUDIT_ACTIONS, type AuditAction, verifyAuditRecord } from "@/lib/server/audit";
 import { redactSensitiveContent } from "@/lib/server/persistence";
+import { enforceRateLimit, getRateLimitHeaders } from "@/lib/server/rate-limiter";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -30,28 +32,28 @@ function sanitizeDetails(data: unknown): unknown {
 
 export async function GET(req: Request) {
   try {
-    // 1. Authenticate Request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    // 1. Authenticate & Authorize Request
+    const authResult = await authenticateAndAuthorize(req, "audit:read");
+    if ("errorResponse" in authResult) {
+      return authResult.errorResponse;
+    }
+    const uid = authResult.uid;
+
+    // 2. Enforce Rate Limiting
+    const rlResult = await enforceRateLimit(uid, "STANDARD_API");
+    if (!rlResult.success) {
+      const status = rlResult.errorType === "INFRASTRUCTURE_UNAVAILABLE" ? 503 : 429;
       return NextResponse.json(
-        { error: "Missing or invalid authorization token" },
-        { status: 401 }
+        {
+          error: {
+            code: rlResult.errorType || "RATE_LIMIT_EXCEEDED",
+            message: rlResult.reason || "Rate limit exceeded.",
+            retryAfter: rlResult.retryAfter,
+          },
+        },
+        { status, headers: getRateLimitHeaders(rlResult) }
       );
     }
-
-    const token = authHeader.split("Bearer ")[1];
-    let decodedToken;
-    try {
-      decodedToken = await adminAuth.verifyIdToken(token, true);
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid or expired authentication token" },
-        { status: 401 }
-      );
-    }
-
-    // UID is derived exclusively from the verified token
-    const uid = decodedToken.uid;
 
     // 2. Parse & Validate Query Parameters
     const { searchParams } = new URL(req.url);
@@ -179,11 +181,33 @@ export async function GET(req: Request) {
 
     const logs = pageDocs.map((doc: any) => {
       const data = doc.data();
+      const hasCrypto = Boolean(data.recordHash && data.signature);
+      let isVerified = false;
+      if (hasCrypto) {
+        try {
+          isVerified = verifyAuditRecord({
+            uid: data.uid || uid,
+            action: data.action,
+            details: data.details || {},
+            timestamp: data.timestamp,
+            previousHash: data.previousHash || "",
+            recordHash: data.recordHash,
+            signature: data.signature,
+            keyId: data.keyId || "v1",
+          }).valid;
+        } catch {
+          isVerified = false;
+        }
+      }
       return {
         id: doc.id,
         action: data.action,
         timestamp: data.timestamp,
         details: sanitizeDetails(data.details || {}),
+        previousHash: data.previousHash,
+        recordHash: data.recordHash,
+        signature: data.signature,
+        isVerified,
       };
     });
 
@@ -212,4 +236,32 @@ export async function GET(req: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function POST() {
+  return NextResponse.json(
+    { error: "Method Not Allowed. Audit logs are append-only and cannot be created via client API." },
+    { status: 405, headers: { Allow: "GET" } }
+  );
+}
+
+export async function PUT() {
+  return NextResponse.json(
+    { error: "Method Not Allowed. Audit logs are append-only and cannot be modified." },
+    { status: 405, headers: { Allow: "GET" } }
+  );
+}
+
+export async function PATCH() {
+  return NextResponse.json(
+    { error: "Method Not Allowed. Audit logs are append-only and cannot be modified." },
+    { status: 405, headers: { Allow: "GET" } }
+  );
+}
+
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "Method Not Allowed. Audit logs cannot be deleted." },
+    { status: 405, headers: { Allow: "GET" } }
+  );
 }

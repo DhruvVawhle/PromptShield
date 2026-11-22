@@ -54,13 +54,13 @@ export interface NavigationMenuProps {
   onSignOut: () => Promise<void>;
 }
 
-function ThemeToggle({ onLightSection }: { onLightSection?: boolean }) {
+function ThemeToggle({ onLightSection = false }: { onLightSection?: boolean } = {}) {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const isDark = mounted
     ? resolvedTheme === "dark"
@@ -79,6 +79,8 @@ function ThemeToggle({ onLightSection }: { onLightSection?: boolean }) {
         "relative inline-flex h-[28px] w-[54px] shrink-0 items-center rounded-full border px-[2px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
         isDark
           ? "border-white/20 bg-white/10 hover:bg-white/15 focus-visible:ring-white focus-visible:ring-offset-black"
+          : onLightSection
+          ? "border-foreground/20 bg-background/80 hover:bg-background focus-visible:ring-ring focus-visible:ring-offset-background"
           : "border-border bg-muted/80 hover:bg-muted focus-visible:ring-ring focus-visible:ring-offset-page"
       )}
     >
@@ -113,7 +115,6 @@ export function NavigationMenu({
   const [open, setOpen] = React.useState(false);
   const [hovered, setHovered] = React.useState<string | null>(null);
   const [currentSection, setCurrentSection] = React.useState<string | null>(null);
-  const [isOnHero, setIsOnHero] = React.useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = React.useState(false);
 
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -186,20 +187,6 @@ export function NavigationMenu({
   }, [sectionIds]);
 
   React.useEffect(() => {
-    const hero = document.getElementById("home");
-    if (!hero) {
-      setIsOnHero(false);
-      return;
-    }
-    const obs = new IntersectionObserver(
-      ([entry]) => setIsOnHero(entry ? entry.isIntersecting : false),
-      { threshold: 0, rootMargin: "-64px 0px 0px 0px" },
-    );
-    obs.observe(hero);
-    return () => obs.disconnect();
-  }, [activePath]);
-
-  React.useEffect(() => {
     if (!open) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -241,11 +228,11 @@ export function NavigationMenu({
   }, []);
 
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const isDark = mounted
     ? resolvedTheme === "dark"

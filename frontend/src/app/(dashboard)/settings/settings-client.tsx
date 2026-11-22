@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Panel } from "@/components/ui/panel";
@@ -16,7 +17,6 @@ import {
   Lock, 
   Bell, 
   UserCircle,
-  Database,
   CheckCircle2,
   AlertCircle,
   Download,
@@ -299,7 +299,7 @@ export function SettingsClient({
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden">
                   {user?.photoURL ? (
-                    <img src={user.photoURL} alt={user.displayName || "User"} className="h-full w-full object-cover" />
+                    <Image src={user.photoURL} alt={user.displayName || "User"} width={40} height={40} unoptimized className="h-full w-full object-cover" />
                   ) : (
                     <span className="text-sm font-semibold text-primary">{user?.displayName?.charAt(0) || user?.email?.charAt(0) || "U"}</span>
                   )}

@@ -2,7 +2,7 @@ process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "test-project";
 process.env.FIREBASE_CLIENT_EMAIL = "test@test.com";
 process.env.FIREBASE_PRIVATE_KEY = "test-key";
 
-import test, { mock, beforeEach } from "node:test";
+import test, { describe, mock, beforeEach } from "node:test";
 import assert from "node:assert";
 import { POST, GET } from "@/app/api/v1/policies/route";
 import { PUT, DELETE } from "@/app/api/v1/policies/[id]/route";
@@ -41,7 +41,7 @@ const mockCollection: any = {
   doc: (id?: string) => mockDoc(id || "new-id"),
   where: () => mockCollection,
   orderBy: () => mockCollection,
-  add: async (data: any) => ({ id: "mock-id" }),
+  add: async () => ({ id: "mock-id" }),
   get: async () => ({
     empty: false,
     docs: [
@@ -52,7 +52,7 @@ const mockCollection: any = {
 
 mock.method(adminDb, "collection", () => mockCollection);
 mock.method(adminDb, "batch", () => mockBatch);
-mock.method(adminAuth, "verifyIdToken", async (token: string, checkRevoked?: boolean) => {
+mock.method(adminAuth, "verifyIdToken", async (token: string) => {
   if (token === "good-token") return { uid: "test-uid" };
   throw { code: "auth/id-token-expired" };
 });
@@ -63,7 +63,8 @@ beforeEach(() => {
 });
 
 // 1. Authentication Tests
-test("Policies API - Unauthenticated requests return 401", async () => {
+describe("Policies API & Mutation Validation", () => {
+  test("Policies API - Unauthenticated requests return 401", async () => {
   const reqPost = new Request("https://test/api/v1/policies", { method: "POST" });
   assert.strictEqual((await POST(reqPost)).status, 401);
 
@@ -253,4 +254,5 @@ test("Policies API - Batch write failure fails closed (500)", async () => {
   });
   const res = await POST(req);
   assert.strictEqual(res.status, 500);
+});
 });

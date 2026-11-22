@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useTheme } from "next-themes";
 import { Panel } from "@/components/ui/panel";
@@ -8,9 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   ChevronRight, 
-  UserCircle, 
   Mail, 
-  Phone,
   Shield, 
   Key, 
   LogOut, 
@@ -31,7 +30,7 @@ import { getFirebaseFirestore } from "@/lib/firebase";
 import { USERS_COLLECTION } from "@/lib/user-profile";
 
 export function ProfileClient() {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
 
   const [isEditing, setIsEditing] = React.useState(false);
@@ -45,9 +44,11 @@ export function ProfileClient() {
 
   React.useEffect(() => {
     if (user) {
-      setFormData({
-        displayName: user.displayName || "",
-        phoneNumber: user.phoneNumber || "",
+      queueMicrotask(() => {
+        setFormData({
+          displayName: user.displayName || "",
+          phoneNumber: user.phoneNumber || "",
+        });
       });
     }
   }, [user]);
@@ -124,7 +125,7 @@ export function ProfileClient() {
           <Panel className="p-6 overflow-hidden flex flex-col sm:flex-row items-center sm:items-start gap-6 relative">
             <div className="h-24 w-24 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden">
               {user.photoURL ? (
-                <img src={user.photoURL} alt={user.displayName || "User"} className="h-full w-full object-cover" />
+                <Image src={user.photoURL} alt={user.displayName || "User"} width={96} height={96} unoptimized className="h-full w-full object-cover" />
               ) : (
                 <span className="text-3xl font-semibold text-primary">{user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}</span>
               )}

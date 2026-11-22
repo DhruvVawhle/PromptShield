@@ -8,7 +8,11 @@ export type AuditAction =
   | "UNAUTHORIZED_ACCESS_ATTEMPT"
   | "SECURITY_DECISION"
   | "INCIDENT_STATUS_UPDATED"
-  | "INCIDENT_RESOLVED";
+  | "INCIDENT_RESOLVED"
+  | "USER_ROLE_UPDATED"
+  | "USER_INVITED"
+  | "AUDIT_VERIFIED"
+  | "INTEGRITY_CHECK_FAILED";
 
 export const VALID_AUDIT_ACTIONS: readonly AuditAction[] = [
   "POLICY_CREATED",
@@ -19,6 +23,10 @@ export const VALID_AUDIT_ACTIONS: readonly AuditAction[] = [
   "SECURITY_DECISION",
   "INCIDENT_STATUS_UPDATED",
   "INCIDENT_RESOLVED",
+  "USER_ROLE_UPDATED",
+  "USER_INVITED",
+  "AUDIT_VERIFIED",
+  "INTEGRITY_CHECK_FAILED",
 ];
 
 export interface AuditLogItem {
@@ -26,6 +34,11 @@ export interface AuditLogItem {
   action: AuditAction;
   timestamp: string;
   details: Record<string, any>;
+  previousHash?: string;
+  recordHash?: string;
+  signature?: string;
+  keyId?: string;
+  isVerified?: boolean;
 }
 
 export interface AuditLogsResponse {
@@ -80,18 +93,53 @@ export async function fetchAuditLogs(
   return res.json();
 }
 
+export async function verifyAuditLogsIntegrity(): Promise<{
+  verified: boolean;
+  totalRecords: number;
+  validCount: number;
+  tamperedCount: number;
+  chainIntact: boolean;
+  details?: string;
+}> {
+  const auth = getFirebaseAuth();
+  const token = await auth.currentUser?.getIdToken();
+
+  if (!token) {
+    throw new Error("Authentication required to verify audit logs.");
+  }
+
+  const res = await fetch("/api/v1/audit-logs/verify", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => null);
+    throw new Error(errorData?.error || `Audit verification failed (HTTP ${res.status})`);
+  }
+
+  return res.json();
+}
+
 export function getAuditActionTone(action: string): "allow" | "warn" | "sanitize" | "block" | "info" {
   switch (action) {
     case "POLICY_CREATED":
     case "INCIDENT_RESOLVED":
+    case "AUDIT_VERIFIED":
       return "allow";
     case "POLICY_UPDATED":
     case "POLICY_ACTIVATION_CHANGED":
     case "INCIDENT_STATUS_UPDATED":
+    case "USER_ROLE_UPDATED":
+    case "USER_INVITED":
       return "info";
     case "POLICY_DELETED":
       return "warn";
     case "UNAUTHORIZED_ACCESS_ATTEMPT":
+    case "INTEGRITY_CHECK_FAILED":
       return "block";
     case "SECURITY_DECISION":
       return "sanitize";
@@ -118,6 +166,14 @@ export function formatAuditActionLabel(action: string): string {
       return "Incident Status Updated";
     case "INCIDENT_RESOLVED":
       return "Incident Resolved";
+    case "USER_ROLE_UPDATED":
+      return "User Role Updated";
+    case "USER_INVITED":
+      return "User Invited";
+    case "AUDIT_VERIFIED":
+      return "Audit Integrity Verified";
+    case "INTEGRITY_CHECK_FAILED":
+      return "Audit Integrity Failed";
     default:
       return action;
   }

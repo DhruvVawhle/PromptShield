@@ -3,24 +3,17 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  ShieldAlert,
   ShieldCheck,
-  Lock,
   ArrowRight,
   Check,
   ChevronRight,
   Copy,
   Play,
   RotateCcw,
-  Sparkles,
   Search,
-  ExternalLink,
   Terminal,
-  Activity,
   Layers,
-  Zap,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type DecisionKey = "allow" | "warn" | "sanitize" | "block";

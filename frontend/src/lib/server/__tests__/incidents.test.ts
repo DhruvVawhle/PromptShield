@@ -2,7 +2,7 @@ process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = "test-project";
 process.env.FIREBASE_CLIENT_EMAIL = "test@test.com";
 process.env.FIREBASE_PRIVATE_KEY = "test-key";
 
-import test, { mock, beforeEach } from "node:test";
+import test, { describe, mock, beforeEach } from "node:test";
 import assert from "node:assert";
 import { GET as listIncidents } from "@/app/api/v1/incidents/route";
 import { GET as getIncident, PATCH as updateIncident } from "@/app/api/v1/incidents/[id]/route";
@@ -219,7 +219,8 @@ beforeEach(() => {
   ];
 });
 
-// 1. Authentication Tests
+describe("Security Incidents API & Triaging", () => {
+  // 1. Authentication Tests
 test("Incidents API - Missing Authorization returns 401", async () => {
   const reqList = new Request("https://test/api/v1/incidents", { method: "GET" });
   assert.strictEqual((await listIncidents(reqList)).status, 401);
@@ -442,4 +443,5 @@ test("Incidents API - Database failure returns 500", async () => {
   });
   const res = await listIncidents(req);
   assert.strictEqual(res.status, 500);
+});
 });

@@ -12,6 +12,10 @@ import {
   ChevronRight, 
   FileText,
   AlertTriangle,
+  Sparkles,
+  Globe,
+  Zap,
+  Cpu,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Panel } from "@/components/ui/panel";
@@ -26,12 +30,14 @@ type Message = {
   content: string;
   error?: boolean;
   securityNotice?: string;
+  provider?: string;
 };
 
 export function ChatClient() {
   const { user } = useAuth();
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [draft, setDraft] = React.useState("");
+  const [selectedProvider, setSelectedProvider] = React.useState<"hybrid" | "gemini" | "groq">("hybrid");
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [activeAssistantId, setActiveAssistantId] = React.useState<string | null>(null);
   const messagesRef = React.useRef<HTMLDivElement | null>(null);
@@ -77,7 +83,7 @@ export function ChatClient() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ prompt: trimmed }),
+        body: JSON.stringify({ prompt: trimmed, provider: selectedProvider }),
       });
 
       if (!res.ok) {
@@ -99,6 +105,7 @@ export function ChatClient() {
       }
 
       const decision = res.headers.get("X-Security-Decision");
+      const providerHeader = res.headers.get("X-AI-Provider") || undefined;
       const notice = decision === "SANITIZE"
         ? "PromptShield sanitized adversarial instructions before forwarding."
         : decision === "WARN"
@@ -115,6 +122,7 @@ export function ChatClient() {
           role: "assistant",
           content: "",
           securityNotice: notice,
+          provider: providerHeader,
         }
       ]);
 
@@ -140,13 +148,15 @@ export function ChatClient() {
         scrollToBottom(false);
       }
       scrollToBottom(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An error occurred while contacting the AI provider.";
       setMessages(prev => [
         ...prev,
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          content: err.message || "An error occurred while contacting the AI provider.",
+          content: errorMessage,
           error: true,
         }
       ]);
@@ -315,6 +325,12 @@ export function ChatClient() {
                             <span>{msg.securityNotice}</span>
                           </div>
                         ) : null}
+                        {msg.role === "assistant" && msg.provider && !msg.error ? (
+                          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/80">
+                            <Cpu className="h-3 w-3 text-primary" />
+                            <span>{msg.provider}</span>
+                          </div>
+                        ) : null}
                         {msg.content}
                       </div>
                     </div>
@@ -336,7 +352,53 @@ export function ChatClient() {
             </div>
 
             {/* Composer */}
-            <div className="p-4 bg-card border-t border-border">
+            <div className="p-4 bg-card border-t border-border flex flex-col gap-2.5">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-primary" /> Engine:
+                </span>
+                <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-lg border border-border/50 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProvider("hybrid")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
+                      selectedProvider === "hybrid"
+                        ? "bg-card text-foreground shadow-xs border border-border/60"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    title="Auto-routes: Gemini for latest data, Groq for ultra-low latency inference"
+                  >
+                    <Sparkles className="h-3 w-3 text-primary" /> Auto Hybrid
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProvider("gemini")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
+                      selectedProvider === "gemini"
+                        ? "bg-card text-foreground shadow-xs border border-border/60"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    title="Google Gemini: Up-to-date real-time world knowledge"
+                  >
+                    <Globe className="h-3 w-3 text-blue-500" /> Gemini
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProvider("groq")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1",
+                      selectedProvider === "groq"
+                        ? "bg-card text-foreground shadow-xs border border-border/60"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    title="Groq: Ultra-low latency LPU inference"
+                  >
+                    <Zap className="h-3 w-3 text-amber-500" /> Groq
+                  </button>
+                </div>
+              </div>
               <div className="relative flex items-end gap-2 bg-muted/30 border border-border rounded-xl p-2 shadow-sm focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary/50 transition-shadow">
                 <textarea
                   ref={inputRef}

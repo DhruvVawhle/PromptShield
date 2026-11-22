@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { authenticateAndAuthorize } from "@/lib/server/rbac";
 import { logAudit } from "@/lib/server/audit";
 
 const VALID_ACTIONS = ["BLOCK", "SANITIZE", "WARN", "ALLOW"];
@@ -13,29 +14,9 @@ const VALID_CATEGORIES = [
   "Custom",
 ];
 
-async function authenticateRequest(req: Request): Promise<{ uid: string } | { errorResponse: NextResponse }> {
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return { errorResponse: NextResponse.json({ error: "Missing or invalid token" }, { status: 401 }) };
-  }
-
-  const token = authHeader.split("Bearer ")[1];
-  try {
-    const decodedToken = await adminAuth.verifyIdToken(token, true);
-    return { uid: decodedToken.uid };
-  } catch (err) {
-    return {
-      errorResponse: NextResponse.json(
-        { error: "Invalid or expired authentication token" },
-        { status: 401 }
-      ),
-    };
-  }
-}
-
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const authResult = await authenticateRequest(req);
+    const authResult = await authenticateAndAuthorize(req, "policies:manage");
     if ("errorResponse" in authResult) {
       return authResult.errorResponse;
     }
@@ -54,13 +35,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     const docRef = adminDb.collection("policies").doc(id);
     const docSnap = await docRef.get();
+    const docData = docSnap.data();
+    const docTenant = docData?.tenantId || docData?.uid;
+    const isOwner = docSnap.exists && (docData?.uid === uid || docTenant === authResult.tenantId);
 
     // Prevent policy ID enumeration by returning uniform 404 for missing and unowned policies
-    if (!docSnap.exists || docSnap.data()?.uid !== uid) {
-      if (docSnap.exists && docSnap.data()?.uid !== uid) {
+    if (!docSnap.exists || !isOwner) {
+      if (docSnap.exists && !isOwner) {
         try {
           await logAudit(uid, "UNAUTHORIZED_ACCESS_ATTEMPT", {
-            reason: "Attempted to update policy owned by another user",
+            reason: "Attempted to update policy owned by another user or tenant",
             policyId: id
           });
         } catch (auditErr) {
@@ -160,7 +144,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const authResult = await authenticateRequest(req);
+    const authResult = await authenticateAndAuthorize(req, "policies:manage");
     if ("errorResponse" in authResult) {
       return authResult.errorResponse;
     }
@@ -169,13 +153,16 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     const docRef = adminDb.collection("policies").doc(id);
     const docSnap = await docRef.get();
+    const docData = docSnap.data();
+    const docTenant = docData?.tenantId || docData?.uid;
+    const isOwner = docSnap.exists && (docData?.uid === uid || docTenant === authResult.tenantId);
 
     // Prevent policy ID enumeration by returning uniform 404 for missing and unowned policies
-    if (!docSnap.exists || docSnap.data()?.uid !== uid) {
-      if (docSnap.exists && docSnap.data()?.uid !== uid) {
+    if (!docSnap.exists || !isOwner) {
+      if (docSnap.exists && !isOwner) {
         try {
           await logAudit(uid, "UNAUTHORIZED_ACCESS_ATTEMPT", {
-            reason: "Attempted to delete policy owned by another user",
+            reason: "Attempted to delete policy owned by another user or tenant",
             policyId: id
           });
         } catch (auditErr) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { authenticateAndAuthorize } from "@/lib/server/rbac";
 import { VALID_INCIDENT_STATUSES, type IncidentStatus } from "@/lib/incidents";
 
 const DEFAULT_LIMIT = 20;
@@ -8,27 +9,12 @@ const VALID_SEVERITIES = ["CRITICAL", "HIGH", "MODERATE", "MEDIUM", "LOW"] as co
 
 export async function GET(req: Request) {
   try {
-    // 1. Authenticate Request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Missing or invalid authorization token" },
-        { status: 401 }
-      );
+    // 1. Authenticate & Authorize Request
+    const authResult = await authenticateAndAuthorize(req, "incidents:read");
+    if ("errorResponse" in authResult) {
+      return authResult.errorResponse;
     }
-
-    const token = authHeader.split("Bearer ")[1];
-    let decodedToken;
-    try {
-      decodedToken = await adminAuth.verifyIdToken(token, true);
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid or expired authentication token" },
-        { status: 401 }
-      );
-    }
-
-    const uid = decodedToken.uid;
+    const uid = authResult.uid;
 
     // 2. Parse & Validate Query Parameters
     const { searchParams } = new URL(req.url);

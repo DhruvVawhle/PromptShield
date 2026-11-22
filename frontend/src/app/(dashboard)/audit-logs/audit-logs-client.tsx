@@ -8,12 +8,12 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert,
   Clock,
   Eye,
   AlertCircle,
   X,
-  Calendar,
+  CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Panel } from "@/components/ui/panel";
@@ -21,11 +21,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import {
   fetchAuditLogs,
+  verifyAuditLogsIntegrity,
   getAuditActionTone,
   formatAuditActionLabel,
   VALID_AUDIT_ACTIONS,
   type AuditLogItem,
-  type AuditAction,
 } from "@/lib/audit-logs";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +33,13 @@ export function AuditLogsClient() {
   const { user, loading: authLoading } = useAuth();
 
   const [logs, setLogs] = React.useState<AuditLogItem[]>([]);
+  const [verifying, setVerifying] = React.useState(false);
+  const [verifyResult, setVerifyResult] = React.useState<{
+    verified: boolean;
+    totalRecords: number;
+    validCount: number;
+    details?: string;
+  } | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -77,15 +84,36 @@ export function AuditLogsClient() {
   React.useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      setLogs([]);
-      setLoading(false);
+      queueMicrotask(() => {
+        setLogs([]);
+        setLoading(false);
+      });
       return;
     }
 
-    setCursorHistory([]);
-    setCurrentCursor(undefined);
-    loadLogs(undefined);
+    queueMicrotask(() => {
+      setCursorHistory([]);
+      setCurrentCursor(undefined);
+      loadLogs(undefined);
+    });
   }, [authLoading, user, actionFilter, loadLogs]);
+
+  const handleVerifyIntegrity = async () => {
+    try {
+      setVerifying(true);
+      const res = await verifyAuditLogsIntegrity();
+      setVerifyResult(res);
+    } catch (err: any) {
+      setVerifyResult({
+        verified: false,
+        totalRecords: logs.length,
+        validCount: 0,
+        details: err.message || "Cryptographic integrity verification failed",
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleNextPage = () => {
     if (!nextCursor) return;
@@ -133,6 +161,17 @@ export function AuditLogsClient() {
           <Button
             variant="outline"
             size="sm"
+            onClick={handleVerifyIntegrity}
+            disabled={verifying}
+            className="gap-2"
+          >
+            <ShieldCheck className={cn("h-4 w-4 text-emerald-600 dark:text-emerald-400", verifying && "animate-spin")} />
+            Verify HMAC Chain
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => loadLogs(currentCursor)}
             disabled={loading}
             className="gap-2"
@@ -142,6 +181,38 @@ export function AuditLogsClient() {
           </Button>
         </div>
       </div>
+
+      {verifyResult ? (
+        <Panel
+          className={cn(
+            "p-4 border",
+            verifyResult.verified ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"
+          )}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              {verifyResult.verified ? (
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
+              )}
+              <div>
+                <h3 className="text-xs font-semibold text-foreground">
+                  {verifyResult.verified ? "Cryptographic Chain Verified" : "Integrity Anomaly Detected"}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{verifyResult.details}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setVerifyResult(null)}
+              className="text-muted-foreground hover:text-foreground text-xs"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </Panel>
+      ) : null}
 
       {/* Filter Toolbar */}
       <Panel className="p-4">
@@ -243,7 +314,14 @@ export function AuditLogsClient() {
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-3">
-                        <StatusBadge label={label} tone={tone} />
+                        <div className="flex items-center gap-1.5">
+                          <StatusBadge label={label} tone={tone} />
+                          {log.recordHash ? (
+                            <span title="HMAC-SHA256 signature intact" className="text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
 
                       <td className="px-4 py-3 text-xs font-mono text-foreground/90 max-w-md truncate">
@@ -355,6 +433,33 @@ export function AuditLogsClient() {
                     {selectedLog.id}
                   </span>
                 </div>
+
+                {selectedLog.recordHash ? (
+                  <div className="col-span-2 space-y-2 rounded-lg border border-border/80 bg-background/50 p-3">
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Cryptographic HMAC-SHA256 Integrity Record
+                    </div>
+                    <div className="space-y-1 text-[11px]">
+                      <div>
+                        <span className="text-muted-foreground">Record SHA-256: </span>
+                        <code className="font-mono text-foreground break-all">{selectedLog.recordHash}</code>
+                      </div>
+                      {selectedLog.previousHash ? (
+                        <div>
+                          <span className="text-muted-foreground">Previous Hash: </span>
+                          <code className="font-mono text-foreground break-all">{selectedLog.previousHash}</code>
+                        </div>
+                      ) : null}
+                      {selectedLog.signature ? (
+                        <div>
+                          <span className="text-muted-foreground">Signature: </span>
+                          <code className="font-mono text-foreground break-all">{selectedLog.signature.slice(0, 32)}...</code>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div>

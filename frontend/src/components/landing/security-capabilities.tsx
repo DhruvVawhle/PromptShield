@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { SplitTextReveal } from "@/components/animations/split-text-reveal"
-import { BRAND_ICONS as ICONS, type BrandIcon } from "./brand-icons"
+import { BRAND_ICONS as ICONS } from "./brand-icons"
 
 const CAPABILITIES = [
   {

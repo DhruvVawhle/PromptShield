@@ -15,7 +15,10 @@ export type AttackCategory =
   | "ROLE_ESCALATION"
   | "SENSITIVE_DATA"
   | "OBFUSCATION"
-  | "POLICY_BYPASS";
+  | "POLICY_BYPASS"
+  | "TOOL_MANIPULATION"
+  | "MULTI_TURN_POISONING"
+  | "DATA_EXFILTRATION";
 
 export type RuleSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 

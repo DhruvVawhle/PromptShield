@@ -8,7 +8,6 @@ import {
   Copy,
   Play,
   Pause,
-  RotateCcw,
   Layers,
   ShieldCheck,
   Server,
@@ -17,7 +16,6 @@ import {
   GitMerge,
   Network,
   RefreshCw,
-  Terminal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 

@@ -16,5 +16,8 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.uid == request.auth.uid;
       allow write: if false;
     }
+    match /audit_chain_heads/{uid} {
+      allow read, write: if false;
+    }
   }
 }

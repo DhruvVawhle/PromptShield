@@ -1,26 +1,13 @@
 import { NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebase-admin";
+import { authenticateAndAuthorize } from "@/lib/server/rbac";
 import { getSystemStatus } from "@/lib/server/system-status";
 
 export async function GET(req: Request) {
   try {
-    // 1. Authenticate Request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Missing or invalid authorization token" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split("Bearer ")[1];
-    try {
-      await adminAuth.verifyIdToken(token, true);
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid or expired authentication token" },
-        { status: 401 }
-      );
+    // 1. Authenticate & Authorize Request
+    const authResult = await authenticateAndAuthorize(req, "system:read");
+    if ("errorResponse" in authResult) {
+      return authResult.errorResponse;
     }
 
     // 2. Parse Query Options

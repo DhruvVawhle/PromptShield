@@ -212,15 +212,35 @@ export const DETECTION_RULES: DetectionRule[] = [
     ruleId: "OBF-001",
     name: "Obfuscated Instruction Payload",
     category: "OBFUSCATION",
-    severity: "MEDIUM",
-    weight: 20,
+    severity: "HIGH",
+    weight: 35,
     test: (text) => {
       const match =
-        text.match(/(?:decode|execute|run)\s+(?:this\s+)?(?:base64|rot13|hex|binary|cipher)\s*[:=]/i) ||
-        text.match(/\\x[0-9a-f]{2}\\x[0-9a-f]{2}\\x[0-9a-f]{2}/i);
+        text.match(/(?:decode|execute|run)\s+(?:this\s+)?(?:base64|rot13|hex|binary|cipher)\s*(?:string|payload|code|text)?\s*[:=]/i) ||
+        text.match(/\\x[0-9a-f]{2}\\x[0-9a-f]{2}\\x[0-9a-f]{2}/i) ||
+        text.match(/(?:base64|hex|rot13)\s+string\s*[:=]\s*[A-Za-z0-9+/=]{20,}/i);
       return {
         matched: Boolean(match),
         evidence: match ? `Obfuscated payload execution command: "${match[0]}"` : undefined,
+      };
+    },
+  },
+
+  // 10B. Out-of-Band Data Exfiltration (EXFIL-001)
+  {
+    ruleId: "EXFIL-001",
+    name: "Out-of-Band Data Exfiltration",
+    category: "DATA_EXFILTRATION",
+    severity: "CRITICAL",
+    weight: 45,
+    test: (text) => {
+      const match =
+        text.match(/!\[.*?\]\s*\(\s*https?:\/\/[^\s)]+(?:leak|secret|prompt|token|log|exfil|data|key)[^\s)]*\)/i) ||
+        text.match(/(?:render|create|send|output)\s+(?:a\s+)?(?:markdown\s+)?image\s+(?:that\s+)?(?:sends?|exfiltrat|pings?|leak)/i) ||
+        text.match(/(?:send|exfiltrate|transmit|upload)\s+(?:the\s+)?(?:system\s+prompt|context|data|secret|key|conversation)\s+to\s+https?:\/\//i);
+      return {
+        matched: Boolean(match),
+        evidence: match ? `Data exfiltration instruction: "${match[0]}"` : undefined,
       };
     },
   },
@@ -237,6 +257,65 @@ export const DETECTION_RULES: DetectionRule[] = [
       return {
         matched: Boolean(match),
         evidence: match ? `Circumvention phrase: "${match[0]}"` : undefined,
+      };
+    },
+  },
+
+  // 12. Indirect Injection / Simulated Context Frames (II-001)
+  {
+    ruleId: "II-001",
+    name: "Indirect System Context Smuggling",
+    category: "INDIRECT_INJECTION",
+    severity: "HIGH",
+    weight: 42,
+    test: (text) => {
+      const match =
+        text.match(/<!--\s*(?:system|admin|evaluator|override)[^>]*-->/i) ||
+        text.match(/\[\/\/\s*\]:\s*#\s*\((?:system|admin|override)[^)]+\)/i) ||
+        text.match(/<\/?(?:system|instruction|prompt_context|developer_mode)>/i) ||
+        text.match(/\[INST\]\s*(?:<<SYS>>|ignore|system)/i);
+      return {
+        matched: Boolean(match),
+        evidence: match ? `Indirect context boundary smuggling: "${match[0]}"` : undefined,
+      };
+    },
+  },
+
+  // 13. Tool & Function Call Manipulation (TOOL-001)
+  {
+    ruleId: "TOOL-001",
+    name: "Tool / Function Manipulation",
+    category: "TOOL_MANIPULATION",
+    severity: "HIGH",
+    weight: 55,
+    test: (text) => {
+      const match =
+        text.match(/call_tool\s*[:=]\s*\{/i) ||
+        text.match(/"function_call"\s*:\s*\{/i) ||
+        text.match(/force\s+(?:the\s+)?(?:execution|call)\s+of\s+(?:function|tool|api|bash|shell)/i) ||
+        text.match(/execute_command\s*\(|execute_sql\s*\(/i);
+      return {
+        matched: Boolean(match),
+        evidence: match ? `Tool/function execution manipulation attempt: "${match[0]}"` : undefined,
+      };
+    },
+  },
+
+  // 14. Multi-turn State Poisoning (MT-001)
+  {
+    ruleId: "MT-001",
+    name: "Multi-turn State Poisoning",
+    category: "MULTI_TURN_POISONING",
+    severity: "HIGH",
+    weight: 35,
+    test: (text) => {
+      const match =
+        text.match(/remember\s+(?:that\s+)?for\s+(?:all\s+)?future\s+(?:turns|messages|queries)\s+(?:you\s+have\s+no|safety\s+is\s+disabled)/i) ||
+        text.match(/in\s+the\s+previous\s+(?:turn|message|conversation)\s+(?:the\s+)?(?:admin|user)\s+authorized\s+you\s+to\s+bypass/i) ||
+        text.match(/ignore\s+all\s+safety\s+rules\s+from\s+now\s+on\s+in\s+this\s+session/i);
+      return {
+        matched: Boolean(match),
+        evidence: match ? `Multi-turn context poisoning pattern: "${match[0]}"` : undefined,
       };
     },
   },
