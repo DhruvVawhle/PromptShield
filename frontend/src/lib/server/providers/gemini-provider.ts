@@ -6,7 +6,7 @@ import {
 } from "@/lib/gemini";
 import type { AIProviderAdapter, CompletionOptions, CompletionResult } from "./provider-interface";
 
-const FALLBACK_MODELS = ["gemini-flash-latest", "gemini-3.8-flash", "gemini-flash-lite-latest"];
+const FALLBACK_MODELS = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash", "gemini-flash-lite-latest"];
 
 export class GeminiProvider implements AIProviderAdapter {
   readonly id = "gemini";

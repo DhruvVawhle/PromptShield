@@ -4,7 +4,7 @@
 
 PromptShield is an enterprise-grade AI security gateway and management platform built on Next.js 16. Every inbound prompt is normalized, analyzed for adversarial threats, evaluated against deterministic custom security policies, scored for risk (0–100), and enforced (`ALLOW`, `WARN`, `SANITIZE`, or `BLOCK`) before it reaches underlying language models or external tools.
 
-Featuring a **Hybrid Multi-Provider AI Gateway**, PromptShield intelligently combines **Google Gemini** (for live, up-to-date real-world knowledge) and **Groq LPUs** (for ultra-fast sub-500ms inference on `qwen/qwen3.8-27b`), with automatic bi-directional failover and historical cutoff disclaimer guardrails.
+Featuring a **Hybrid Multi-Provider AI Gateway**, PromptShield intelligently combines **Google Gemini** (for live, up-to-date real-world knowledge via `gemini-3-flash-preview` at ~1.7s) and **Groq LPUs** (for ultra-fast sub-500ms inference on `qwen/qwen3.8-27b` or 120B reasoning on `openai/gpt-oss-120b`), with automatic bi-directional failover, in-chat security inspection telemetry, and historical cutoff disclaimer guardrails.
 
 ---
 
@@ -16,7 +16,8 @@ Featuring a **Hybrid Multi-Provider AI Gateway**, PromptShield intelligently com
 | **Detect** | Threat Intelligence | Multi-category detection covering direct prompt injection, jailbreaks, system prompt extraction, persona hijacking, credential probing, and evasion with suffix-stripped stem matching. |
 | **Track** | Full Prompt Auditing & Tracking | Real-time preservation of user prompts across Cloud Firestore, Dashboard Recent Events, and Incident Triage with one-click re-analysis, while stripping credentials via `redactSensitiveContent`. |
 | **Enforce** | Guardrail Policies | Strictest-action-wins deterministic precedence engine with customizable risk thresholds and action overrides (`BLOCK`, `SANITIZE`, `WARN`, `ALLOW`). |
-| **Gateway** | Hybrid Multi-Provider Routing | Intelligent router directing real-time/current data queries to Google Gemini (`gemini-flash-latest`, `gemini-3.8-flash`) and low-latency reasoning tasks to Groq (`qwen/qwen3.8-27b`), with transparent failover. |
+| **Gateway** | Hybrid Multi-Provider Routing | Intelligent router directing real-time/current data queries to Google Gemini (`gemini-3-flash-preview` at ~1.7s) and low-latency reasoning tasks to Groq (`qwen/qwen3.8-27b` at 460ms or `openai/gpt-oss-120b` at 1.3s), with transparent failover and rich in-chat telemetry headers. |
+| **Chat** | AI Security Assistant | Real-time gated chat interface featuring in-chat security telemetry: decision badges (`ALLOW`, `WARN`, `SANITIZE`, `BLOCK`), live risk scoring (0-100), provider attribution, execution latency, and expandable telemetry drawers detailing enforced policies, inspected threat categories, and sanitized forwarding diffs. |
 | **Audit** | Immutable Audit Trail | Automatic, tamper-resistant audit logging for policy mutations, security decisions, unauthorized access attempts, and incident triaging with RFC 8785 canonical JSON and HMAC-SHA256 hash chaining. |
 | **Triage** | Incident Resolution | End-to-end incident management with status lifecycle tracking (`OPEN`, `INVESTIGATING`, `RESOLVED`, `FALSE_POSITIVE`) and sanitized resolution notes. |
 | **Diagnose** | Platform Telemetry | Continuous bounded liveness and readiness probes across Firestore, Upstash Redis, Google Gemini, Groq AI Engine, and the compiled rule engine. |
@@ -198,11 +199,21 @@ Reports process liveness and bounded dependency readiness probes (`≤ 3000ms` t
 ### 7. Hybrid AI Inference Gateway API
 #### `POST /api/ai`
 Proxies validated prompts through the **PromptShield Hybrid Gateway**:
-- **Automatic Routing:** Routes real-time, current-affairs, and entertainment queries (e.g. *upcoming releases, live events, sports, elections, prices*) to **Google Gemini** (`gemini-flash-latest`, `gemini-3.8-flash`). Routes fast reasoning, code analysis, and standard Q&A to **Groq LPUs** (`qwen/qwen3.8-27b`) at 460ms speed.
+- **Automatic Routing:** Routes real-time, current-affairs, and entertainment queries (e.g. *upcoming releases, live events, sports, elections, prices*) to **Google Gemini** (`gemini-3-flash-preview` at ~1.7s, avoiding 503 high-demand load spikes). Routes fast reasoning, code analysis, and standard Q&A to **Groq LPUs** (`qwen/qwen3.8-27b` at 460ms or `openai/gpt-oss-120b` at 1.3s).
 - **Provider Override:** Callers can explicitly specify `"provider": "gemini"`, `"provider": "groq"`, or `"provider": "hybrid"`.
 - **Pre-Execution Enforcement:** Prompts evaluated as `BLOCK` terminate immediately (`403 Forbidden`) and never reach any provider. Prompts evaluated as `SANITIZE` pass only stripped safe text.
 - **Fail-Closed Resilience:** Fails closed (`502` / `429`) if rate limits or persistence checks fail.
-- **SSE Token Streaming:** Full server-sent event token streaming with `X-AI-Provider` and `X-AI-Routing-Reason` telemetry headers.
+- **Full In-Chat Telemetry Headers:** Server-sent event token streaming exposes complete inspection telemetry via `Access-Control-Expose-Headers`:
+  - `X-Security-Decision`: `ALLOW` | `WARN` | `SANITIZE` | `BLOCK`
+  - `X-Security-Risk-Score`: Normalized risk score (`0`–`100`)
+  - `X-Security-Risk-Level`: `LOW` | `MEDIUM` | `HIGH` | `CRITICAL`
+  - `X-Security-Policy`: Name of applied tenant guardrail policy
+  - `X-Security-Categories`: Comma-separated list of evaluated categories
+  - `X-Sanitized-Prompt`: URL-encoded sanitized payload (when applicable)
+  - `X-AI-Provider`: Attribution string (e.g., `Hybrid (Google Gemini)`, `Groq LPU Inference Engine`)
+  - `X-AI-Model`: Active model utilized for inference
+  - `X-AI-Routing-Reason`: Reason for routing choice (`recency_detected`, `low_latency_default`, `failover`)
+  - `X-Response-Time-Ms`: Round-trip execution latency in milliseconds
 
 ---
 
@@ -239,8 +250,8 @@ Proxies validated prompts through the **PromptShield Hybrid Gateway**:
 - [Node.js](https://nodejs.org/) 20+
 - A [Firebase](https://firebase.google.com/) project (with Firestore and Authentication enabled)
 - [Upstash Redis](https://upstash.com/) for distributed rate limiting (mandatory in production)
-- A [Groq](https://console.groq.com/keys) API Key (`qwen/qwen3.8-27b`)
-- A [Google Gemini](https://aistudio.google.com/) API Key (`gemini-flash-latest`, `gemini-3.8-flash`)
+- A [Groq](https://console.groq.com/keys) API Key (`qwen/qwen3.8-27b` or `openai/gpt-oss-120b`)
+- A [Google Gemini](https://aistudio.google.com/) API Key (`gemini-3-flash-preview`)
 - A 32-byte secret for `AUDIT_SIGNING_KEY` (HMAC audit signing)
 
 ### 1. Clone & Configure
@@ -255,11 +266,11 @@ Populate `frontend/.env.local`:
 # Groq AI Engine Configuration
 GROQ_BASE_URL=https://api.groq.com/openai/v1
 GROQ_API_KEY=gsk_your_groq_api_key
-GROQ_MODEL=qwen/qwen3.8-27b
+GROQ_MODEL=qwen/qwen3.8-27b # or openai/gpt-oss-120b for 120B reasoning
 
 # Google Gemini AI Engine Configuration
 GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-flash-latest
+GEMINI_MODEL=gemini-3-flash-preview
 GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 
 # Cryptographic Audit Signing Key
@@ -362,7 +373,7 @@ npm run build
 | Graphics & Charts | Three.js, Recharts, Lucide Icons |
 | Backend & Auth | Firebase Admin SDK, Firebase Auth, Cloud Firestore |
 | Rate Limiting | Upstash Redis & `@upstash/ratelimit` |
-| AI Inference Engines | [Google Gemini](https://ai.google.dev/) (`gemini-flash-latest`, `gemini-3.8-flash`) & [Groq](https://groq.com/) (`qwen/qwen3.8-27b`) |
+| AI Inference Engines | [Google Gemini](https://ai.google.dev/) (`gemini-3-flash-preview`) & [Groq](https://groq.com/) (`qwen/qwen3.8-27b`, `openai/gpt-oss-120b`) |
 
 ---
 

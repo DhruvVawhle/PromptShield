@@ -51,6 +51,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const startTime = Date.now();
+
     // Phase 2: Server-side Security Analysis
     const { analyzePromptServer } = await import("@/lib/server/security-engine");
     const { persistSecurityEvent } = await import("@/lib/server/persistence");
@@ -88,13 +90,37 @@ export async function POST(request: Request) {
       model: body.model,
       signal: request.signal,
     });
+    const latencyMs = Date.now() - startTime;
 
     const responseHeaders = new Headers(providerResponse.headers);
     responseHeaders.set("X-Security-Decision", analysisResult.decision);
     responseHeaders.set("X-Security-Risk-Score", analysisResult.riskScore.toString());
+    responseHeaders.set(
+      "X-Security-Risk-Level",
+      analysisResult.riskLevel ||
+        (analysisResult.riskScore > 75
+          ? "CRITICAL"
+          : analysisResult.riskScore > 50
+          ? "HIGH"
+          : analysisResult.riskScore > 20
+          ? "MEDIUM"
+          : "LOW")
+    );
+    responseHeaders.set("X-Security-Policy", policy?.name || "Default Guardrail Policy");
+    if (analysisResult.categories && analysisResult.categories.length > 0) {
+      responseHeaders.set("X-Security-Categories", analysisResult.categories.join(", "));
+    }
     if (analysisResult.decision === "SANITIZE" && analysisResult.sanitizedPrompt) {
       responseHeaders.set("X-Sanitized-Prompt", encodeURIComponent(analysisResult.sanitizedPrompt));
     }
+    if (!responseHeaders.has("X-AI-Provider")) {
+      responseHeaders.set("X-AI-Provider", provider.name || "AI Engine");
+    }
+    responseHeaders.set("X-Response-Time-Ms", latencyMs.toString());
+    responseHeaders.set(
+      "Access-Control-Expose-Headers",
+      "X-Security-Decision, X-Security-Risk-Score, X-Security-Risk-Level, X-Security-Policy, X-Security-Categories, X-Sanitized-Prompt, X-AI-Provider, X-AI-Model, X-AI-Routing-Reason, X-Response-Time-Ms"
+    );
 
     return new Response(providerResponse.body, {
       status: providerResponse.status,

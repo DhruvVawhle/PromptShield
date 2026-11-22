@@ -215,6 +215,8 @@ export class GroqProvider implements AIProviderAdapter {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Transfer-Encoding": "chunked",
+        "X-AI-Provider": "Groq LPU Inference Engine",
+        "X-AI-Model": targetModel,
       },
     });
   }
