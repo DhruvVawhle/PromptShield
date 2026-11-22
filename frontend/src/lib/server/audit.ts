@@ -249,7 +249,7 @@ export async function logAudit(
       const headRef = adminDb.collection("audit_chain_heads").doc(uid);
       const newRecordRef = adminDb.collection("audit_logs").doc();
 
-      const createdRecord = await adminDb.runTransaction(async (transaction) => {
+      const createdRecord = await adminDb.runTransaction(async (transaction: any) => {
         let prev = GENESIS_HASH;
         if (typeof transaction.get === "function") {
           const headSnap = await transaction.get(headRef).catch(() => null);

@@ -72,8 +72,8 @@ export function AuditLogsClient() {
         setLogs(response.logs);
         setHasMore(response.pagination.hasMore);
         setNextCursor(response.pagination.nextCursor);
-      } catch (err: any) {
-        setError(err.message || "Failed to load audit logs");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to load audit logs");
       } finally {
         setLoading(false);
       }
@@ -103,12 +103,12 @@ export function AuditLogsClient() {
       setVerifying(true);
       const res = await verifyAuditLogsIntegrity();
       setVerifyResult(res);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setVerifyResult({
         verified: false,
         totalRecords: logs.length,
         validCount: 0,
-        details: err.message || "Cryptographic integrity verification failed",
+        details: err instanceof Error ? err.message : "Cryptographic integrity verification failed",
       });
     } finally {
       setVerifying(false);

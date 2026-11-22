@@ -167,7 +167,7 @@ export function AnalyticsClient() {
           <div className="flex items-center gap-3">
             <select 
               value={period} 
-              onChange={(e) => setPeriod(e.target.value as any)} 
+              onChange={(e) => setPeriod(e.target.value as "7d" | "30d")} 
               className="h-10 bg-card border border-border text-sm rounded-md px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm transition-colors"
             >
               <option value="7d">Last 7 days</option>

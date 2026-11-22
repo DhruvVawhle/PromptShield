@@ -456,7 +456,13 @@ export function IncidentsClient() {
                 
                 <div>
                   <p className="text-xs font-medium text-muted-foreground mb-1">Detected Time</p>
-                  <p className="text-sm">{selectedEvent.timestamp instanceof Date ? selectedEvent.timestamp.toLocaleString() : (selectedEvent.timestamp as any).toDate().toLocaleString()}</p>
+                  <p className="text-sm">
+                    {selectedEvent.timestamp instanceof Date
+                      ? selectedEvent.timestamp.toLocaleString()
+                      : typeof (selectedEvent.timestamp as { toDate?: () => Date })?.toDate === "function"
+                      ? (selectedEvent.timestamp as { toDate: () => Date }).toDate().toLocaleString()
+                      : String(selectedEvent.timestamp)}
+                  </p>
                 </div>
                 
                 {selectedEvent.policy && (

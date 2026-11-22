@@ -12,12 +12,22 @@ import { Shield, ChevronRight, Activity, Clock, Loader2, ShieldAlert, ShieldChec
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+interface AnalysisStepResult {
+  steps: Array<{
+    id: string;
+    label: string;
+    status: string;
+    result: string;
+    tone?: "allow" | "warn" | "block" | "sanitize";
+  }>;
+}
+
 export function PlaygroundClient() {
   const user = useUser();
   const [promptText, setPromptText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [history, setHistory] = useState<SecurityEventWithId[]>([]);
-  const [currentResult, setCurrentResult] = useState<any | null>(null);
+  const [currentResult, setCurrentResult] = useState<AnalysisStepResult | null>(null);
 
   const loadHistory = React.useCallback(async () => {
     if (!user) return;
@@ -64,7 +74,7 @@ export function PlaygroundClient() {
       };
 
       const wordCount = result.tokenAnalysis?.wordCount ?? promptText.trim().split(/\s+/).length;
-      const flaggedStems = result.tokenAnalysis?.flaggedTokens?.map((f: any) => `"${f.token}" [${f.stem}]`).join(", ");
+      const flaggedStems = result.tokenAnalysis?.flaggedTokens?.map((f: { token?: string; stem?: string }) => `"${f.token}" [${f.stem}]`).join(", ");
 
       const mappedResult = {
         steps: [

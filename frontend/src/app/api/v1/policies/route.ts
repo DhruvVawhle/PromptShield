@@ -27,7 +27,7 @@ export async function GET(req: Request) {
       .orderBy("updatedAt", "desc")
       .get();
 
-    const policies = policiesSnap.docs.map(doc => ({
+    const policies = policiesSnap.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data()
     }));

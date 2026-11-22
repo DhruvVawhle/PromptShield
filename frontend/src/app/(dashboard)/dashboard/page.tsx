@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { Timestamp } from "firebase/firestore"
 import { Copy, Check, Shield, ChevronDown, TrendingUp, ArrowUpRight, AlertTriangle } from "lucide-react"
 import {
   AreaChart,
@@ -88,7 +89,13 @@ export default function DashboardRoutePage() {
   const [analysisError, setAnalysisError] = React.useState<string | null>(null)
   const [events, setEvents] = React.useState<SecurityEventWithId[]>([])
   const [prevEvents, setPrevEvents] = React.useState<SecurityEventWithId[]>([])
-  const [tokenAnalysis, setTokenAnalysis] = React.useState<any | null>(null)
+  const [tokenAnalysis, setTokenAnalysis] = React.useState<{
+    wordCount?: number;
+    tokenCount?: number;
+    tokens?: string[];
+    stemmedTokens?: string[];
+    flaggedTokens?: Array<{ token?: string; stem?: string; reason?: string }>;
+  } | null>(null)
   const [dataLoading, setDataLoading] = React.useState(true)
   const [dataError, setDataError] = React.useState<string | null>(null)
 
@@ -181,7 +188,7 @@ export default function DashboardRoutePage() {
         id: data.requestId || `ev_${Date.now()}`,
         uid: user.uid,
         promptId: data.requestId || `ev_${Date.now()}`,
-        timestamp: new Date().toISOString() as any,
+        timestamp: Timestamp.now(),
         riskScore,
         threatDetected: decision !== "ALLOW" || threats.length > 0,
         threatCategory: threats[0]?.category ?? null,
@@ -447,7 +454,7 @@ export default function DashboardRoutePage() {
                     Flagged Adversarial Roots ({tokenAnalysis.flaggedTokens.length})
                   </p>
                   <div className="flex flex-wrap gap-1.5 mt-1">
-                    {tokenAnalysis.flaggedTokens.map((f: any, idx: number) => (
+                    {tokenAnalysis.flaggedTokens.map((f: { token?: string; stem?: string; reason?: string }, idx: number) => (
                       <span
                         key={idx}
                         className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-mono"
@@ -470,7 +477,7 @@ export default function DashboardRoutePage() {
                   <p className="text-[11px] text-muted-foreground mb-1.5">Morphological stems evaluated:</p>
                   <div className="flex flex-wrap gap-1">
                     {tokenAnalysis.tokens.slice(0, 16).map((tok: string, idx: number) => {
-                      const isFlagged = tokenAnalysis.flaggedTokens?.some((f: any) => f.token === tok);
+                      const isFlagged = tokenAnalysis.flaggedTokens?.some((f: { token?: string }) => f.token === tok);
                       const stem = tokenAnalysis.stemmedTokens?.[idx] ?? tok;
                       return (
                         <span
