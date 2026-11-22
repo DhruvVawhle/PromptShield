@@ -27,6 +27,7 @@ import {
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Panel } from "@/components/ui/panel";
 import { MessageLoading } from "@/components/ui/message-loading";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +67,19 @@ export function ChatClient() {
   const [activeAssistantId, setActiveAssistantId] = React.useState<string | null>(null);
   const [expandedInspectionId, setExpandedInspectionId] = React.useState<string | null>(null);
   const [copiedId, setCopiedId] = React.useState<string | null>(null);
+  const [rawViewIds, setRawViewIds] = React.useState<Set<string>>(new Set());
+
+  const toggleRawView = (id: string) => {
+    setRawViewIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const messagesRef = React.useRef<HTMLDivElement | null>(null);
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
@@ -520,19 +534,30 @@ export function ChatClient() {
                               </button>
 
                               {msg.content && (
-                                <button
-                                  type="button"
-                                  onClick={() => copyToClipboard(msg.content, msg.id)}
-                                  className="p-1 hover:text-foreground hover:bg-muted rounded transition-colors"
-                                  title="Copy response to clipboard"
-                                  aria-label="Copy response"
-                                >
-                                  {copiedId === msg.id ? (
-                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
-                                  ) : (
-                                    <Copy className="h-3.5 w-3.5" />
-                                  )}
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleRawView(msg.id)}
+                                    className="inline-flex items-center gap-1 text-[11px] font-medium hover:text-foreground hover:bg-muted px-1.5 py-0.5 rounded transition-colors"
+                                    title={rawViewIds.has(msg.id) ? "Switch to formatted rich text view" : "View raw markdown"}
+                                  >
+                                    <FileText className="h-3 w-3 text-muted-foreground" />
+                                    <span>{rawViewIds.has(msg.id) ? "Formatted" : "Markdown"}</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyToClipboard(msg.content, msg.id)}
+                                    className="p-1 hover:text-foreground hover:bg-muted rounded transition-colors"
+                                    title="Copy response to clipboard"
+                                    aria-label="Copy response"
+                                  >
+                                    {copiedId === msg.id ? (
+                                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                    ) : (
+                                      <Copy className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -609,14 +634,29 @@ export function ChatClient() {
                         )}
 
                         {/* Message Content */}
-                        {msg.content ? (
+                        {msg.role === "assistant" ? (
+                          msg.content ? (
+                            rawViewIds.has(msg.id) ? (
+                              <pre className="whitespace-pre-wrap font-mono text-xs text-muted-foreground p-3 bg-muted/40 rounded-lg border border-border/60 overflow-x-auto">
+                                {msg.content}
+                              </pre>
+                            ) : (
+                              <div className="relative">
+                                <MarkdownContent content={msg.content} />
+                                {isProcessing && msg.id === activeAssistantId && (
+                                  <span className="inline-block w-1.5 h-4 ml-1 bg-primary/70 animate-pulse rounded-xs align-middle" />
+                                )}
+                              </div>
+                            )
+                          ) : isProcessing && msg.id === activeAssistantId ? (
+                            <div className="flex items-center gap-2.5 py-2 text-muted-foreground text-xs">
+                              <MessageLoading />
+                              <span className="animate-pulse font-medium">Gating prompt & generating response...</span>
+                            </div>
+                          ) : null
+                        ) : (
                           <div className="whitespace-pre-wrap">{msg.content}</div>
-                        ) : isProcessing && msg.id === activeAssistantId ? (
-                          <div className="flex items-center gap-2 py-2 text-muted-foreground text-xs">
-                            <MessageLoading />
-                            <span>Gating prompt & generating response...</span>
-                          </div>
-                        ) : null}
+                        )}
 
                         {/* Assistant Timestamp Footer */}
                         {msg.role === "assistant" && (
@@ -634,9 +674,9 @@ export function ChatClient() {
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm mr-3 mt-1">
                         <Shield className="h-4 w-4" />
                       </div>
-                      <div className="px-5 py-4 bg-muted/30 border border-border rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="px-5 py-4 bg-muted/30 border border-border rounded-2xl rounded-tl-sm shadow-sm flex items-center gap-2.5 text-xs text-muted-foreground">
                         <MessageLoading />
-                        <span>Evaluating security guardrails...</span>
+                        <span className="animate-pulse font-medium">Evaluating security guardrails...</span>
                       </div>
                     </div>
                   )}

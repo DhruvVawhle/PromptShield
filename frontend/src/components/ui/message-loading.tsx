@@ -1,47 +1,45 @@
-export function MessageLoading() {
+"use client";
+
+import * as React from "react";
+import { cn } from "@/lib/utils";
+
+interface MessageLoadingProps {
+  className?: string;
+  label?: string;
+}
+
+export function MessageLoading({ className, label }: MessageLoadingProps) {
   return (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-      className="text-foreground"
-      aria-hidden="true"
+    <span
+      className={cn("inline-flex items-center gap-1.5 py-1 px-0.5", className)}
+      role="status"
+      aria-label={label || "Thinking & generating response..."}
     >
-      <circle cx="4" cy="12" r="2" fill="currentColor">
-        <animate
-          id="spinner_qFRN"
-          begin="0;spinner_OcgL.end+0.25s"
-          attributeName="cy"
-          calcMode="spline"
-          dur="0.6s"
-          values="12;6;12"
-          keySplines=".33,.66,.66,1;.33,0;.66,.33"
-        />
-      </circle>
-
-      <circle cx="12" cy="12" r="2" fill="currentColor">
-        <animate
-          begin="spinner_qFRN.begin+0.1s"
-          attributeName="cy"
-          calcMode="spline"
-          dur="0.6s"
-          values="12;6;12"
-          keySplines=".33,.66,.66,1;.33,0;.66,.33"
-        />
-      </circle>
-
-      <circle cx="20" cy="12" r="2" fill="currentColor">
-        <animate
-          id="spinner_OcgL"
-          begin="spinner_qFRN.begin+0.2s"
-          attributeName="cy"
-          calcMode="spline"
-          dur="0.6s"
-          values="12;6;12"
-          keySplines=".33,.66,.66,1;.33,0;.66,.33"
-        />
-      </circle>
-    </svg>
-  )
+      <style>{`
+        @keyframes promptshield-dot-bounce {
+          0%, 60%, 100% {
+            transform: translateY(0);
+            opacity: 0.35;
+          }
+          30% {
+            transform: translateY(-6px);
+            opacity: 1;
+          }
+        }
+        .ps-dot-bounce-1 {
+          animation: promptshield-dot-bounce 1.1s infinite ease-in-out;
+        }
+        .ps-dot-bounce-2 {
+          animation: promptshield-dot-bounce 1.1s infinite ease-in-out 0.18s;
+        }
+        .ps-dot-bounce-3 {
+          animation: promptshield-dot-bounce 1.1s infinite ease-in-out 0.36s;
+        }
+      `}</style>
+      <span className="h-2 w-2 rounded-full bg-primary ps-dot-bounce-1 shadow-xs" />
+      <span className="h-2 w-2 rounded-full bg-primary ps-dot-bounce-2 shadow-xs" />
+      <span className="h-2 w-2 rounded-full bg-primary ps-dot-bounce-3 shadow-xs" />
+      {label && <span className="text-xs text-muted-foreground ml-1.5 animate-pulse font-medium">{label}</span>}
+    </span>
+  );
 }
