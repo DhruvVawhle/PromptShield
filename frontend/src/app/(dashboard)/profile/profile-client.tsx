@@ -86,8 +86,8 @@ export function ProfileClient() {
     if (window.confirm("Are you sure you want to delete your account? This action cannot be undone and will permanently erase all your data.")) {
       try {
         await user.delete();
-      } catch (error: any) {
-        if (error?.code === "auth/requires-recent-login") {
+      } catch (error: unknown) {
+        if ((error as { code?: string })?.code === "auth/requires-recent-login") {
           alert("For security reasons, please log out and log back in before deleting your account.");
         } else {
           alert("Failed to delete account. Please try again.");

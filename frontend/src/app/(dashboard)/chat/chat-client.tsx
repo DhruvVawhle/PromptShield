@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Shield,
-  Search,
   ShieldCheck,
   ShieldAlert,
   AlertTriangle,
@@ -15,7 +14,6 @@ import {
   Check,
   Info,
   Lock,
-  ChevronRight,
   ChevronDown,
   ChevronUp,
   FileText,
@@ -237,17 +235,18 @@ export function ChatClient() {
       if (!reader) throw new Error("Stream not available");
       const decoder = new TextDecoder();
 
-      let fullContent = "";
+      let streamedContent = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        fullContent += decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value, { stream: true });
+        streamedContent = streamedContent + chunk;
 
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
+            msg.id === assistantMessageId ? { ...msg, content: streamedContent } : msg
           )
         );
         scrollToBottom(false);

@@ -165,7 +165,7 @@ export function SettingsClient({
                 </div>
                 <select 
                   value={settings.defaultAction}
-                  onChange={(e) => setSettings({...settings, defaultAction: e.target.value as any})}
+                  onChange={(e) => setSettings({...settings, defaultAction: e.target.value as "ALLOW" | "WARN" | "BLOCK"})}
                   className="bg-background border border-border rounded-lg text-sm px-3 py-2 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 cursor-pointer min-w-[200px]"
                 >
                   <option value="ALLOW">Allow on uncertain prompts</option>

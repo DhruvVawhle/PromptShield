@@ -103,9 +103,9 @@ export function PlaygroundClient() {
       setCurrentResult(mappedResult);
       // Wait a moment for Firestore to be consistent then reload history
       setTimeout(() => loadHistory(), 500);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      alert(e.message || "Analysis failed.");
+      alert(e instanceof Error ? e.message : "Analysis failed.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -233,12 +233,12 @@ export function PlaygroundClient() {
             </CardHeader>
             <CardContent>
               <div className="space-y-0 pl-1">
-                {(currentResult?.steps || [
+                {((currentResult?.steps as Array<{ id: string; label: string; status: string; result?: string; tone?: "block" | "allow" | "warn" | "sanitize" }>) || [
                   { id: "1", label: "Prompt Received", status: "pending" },
                   { id: "2", label: "Threat Detection", status: "pending" },
                   { id: "3", label: "Policy Evaluation", status: "pending" },
                   { id: "4", label: "Security Decision", status: "pending" },
-                ]).map((step: any, idx: number, arr: any[]) => (
+                ]).map((step, idx, arr) => (
                   <div key={step.id} className="relative pl-6 pb-6 last:pb-0">
                     {idx < arr.length - 1 && (
                       <div className={cn(
