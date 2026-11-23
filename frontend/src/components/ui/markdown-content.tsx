@@ -71,7 +71,7 @@ function CodeBlock({
           )}
         </button>
       </div>
-      <pre className="p-3.5 overflow-x-auto text-[12px] font-mono leading-relaxed text-foreground">
+      <pre data-lenis-prevent className="p-3.5 overflow-x-auto overscroll-x-contain text-[12px] font-mono leading-relaxed text-foreground">
         <code className={className} {...props}>
           {children}
         </code>
