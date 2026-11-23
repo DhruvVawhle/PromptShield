@@ -135,14 +135,72 @@ export function ChatClient() {
     if (!panel || !messagesEl) return;
 
     const handleWheel = (e: WheelEvent) => {
+      // 1. Exclude browser zoom gestures (Ctrl+wheel / touchpad pinch-zoom)
+      if (e.ctrlKey || e.metaKey) {
+        return;
+      }
+
+      // Stop wheel events from propagating to window / Lenis
       e.stopPropagation();
 
+      const target = e.target as HTMLElement | null;
+
+      // 2. Preserve scrolling inside the prompt textarea
+      const textarea = inputRef.current;
+      if (textarea && textarea.contains(target)) {
+        const { scrollTop, scrollHeight, clientHeight } = textarea;
+        const maxTextareaScroll = scrollHeight - clientHeight;
+
+        if (maxTextareaScroll > 1) {
+          const isScrollingDown = e.deltaY > 0;
+          const isScrollingUp = e.deltaY < 0;
+          const canScrollDown = isScrollingDown && scrollTop < maxTextareaScroll - 1;
+          const canScrollUp = isScrollingUp && scrollTop > 1;
+
+          if (canScrollDown || canScrollUp) {
+            // Textarea has room to scroll - allow native scrolling
+            return;
+          }
+        }
+        // At textarea scroll boundary, prevent leaking to outer window
+        e.preventDefault();
+        return;
+      }
+
+      // 3. Preserve horizontal scrolling in nested code blocks & tables
+      if (Math.abs(e.deltaX) > 0) {
+        let currentEl = target;
+        while (currentEl && currentEl !== panel) {
+          if (currentEl.scrollWidth > currentEl.clientWidth + 1) {
+            const overflowX = window.getComputedStyle(currentEl).overflowX;
+            if (overflowX === "auto" || overflowX === "scroll") {
+              const { scrollLeft, scrollWidth, clientWidth } = currentEl;
+              const maxScrollLeft = scrollWidth - clientWidth;
+              const isScrollingRight = e.deltaX > 0;
+              const isScrollingLeft = e.deltaX < 0;
+              const canScrollRight = isScrollingRight && scrollLeft < maxScrollLeft - 1;
+              const canScrollLeft = isScrollingLeft && scrollLeft > 1;
+
+              if (canScrollRight || canScrollLeft) {
+                // If primarily horizontal or purely horizontal, let nested scroller consume it
+                if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) {
+                  return;
+                }
+              }
+              break;
+            }
+          }
+          currentEl = currentEl.parentElement;
+        }
+      }
+
+      // 4. Vertical messages container scrolling
       const { scrollTop, scrollHeight, clientHeight } = messagesEl;
       const maxScroll = scrollHeight - clientHeight;
 
       if (maxScroll > 1) {
         const delta = e.deltaY;
-        const isOverMessages = messagesEl.contains(e.target as Node);
+        const isOverMessages = messagesEl.contains(target);
 
         if (isOverMessages) {
           const isScrollingDown = delta > 0;
@@ -151,11 +209,11 @@ export function ChatClient() {
           const canScrollUp = isScrollingUp && scrollTop > 1;
 
           if (canScrollDown || canScrollUp) {
-            // Container has room to scroll - allow native container scrolling
+            // Messages container has room to scroll - allow native container scrolling
             return;
           }
-        } else {
-          // Cursor is on composer or toolbar inside chat panel - scroll messages
+        } else if (Math.abs(delta) > 0) {
+          // Cursor is on non-scrollable composer / toolbar chrome - scroll messages
           messagesEl.scrollTop += delta;
         }
       }
