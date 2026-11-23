@@ -2,6 +2,41 @@ import { getGroqChatUrl, getGroqConfig, getSafeGroqMessage } from "@/lib/groq";
 import type { AIProviderAdapter, CompletionOptions, CompletionResult } from "./provider-interface";
 import { getTemporalGroundingPrompt } from "./gemini-provider";
 
+function formatGroqMessages(
+  prompt: string,
+  options?: CompletionOptions
+): Array<{ role: string; content: string }> {
+  const basePrompt = getTemporalGroundingPrompt();
+  const systemPrompt = options?.systemInstruction
+    ? `${basePrompt}\n\n${options.systemInstruction}`
+    : basePrompt;
+
+  const messages: Array<{ role: string; content: string }> = [
+    { role: "system", content: systemPrompt },
+  ];
+
+  if (options?.messages && options.messages.length > 0) {
+    for (const msg of options.messages) {
+      if (!msg.content || !msg.content.trim()) continue;
+      messages.push({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content,
+      });
+    }
+
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== "user") {
+      messages.push({ role: "user", content: prompt });
+    } else if (lastMsg.content !== prompt) {
+      lastMsg.content = prompt;
+    }
+  } else {
+    messages.push({ role: "user", content: prompt });
+  }
+
+  return messages;
+}
+
 export class GroqProvider implements AIProviderAdapter {
   readonly id = "groq";
   readonly name = "Groq LPU Inference Engine";
@@ -30,10 +65,7 @@ export class GroqProvider implements AIProviderAdapter {
         },
         body: JSON.stringify({
           model: mod,
-          messages: [
-            { role: "system", content: getTemporalGroundingPrompt() },
-            { role: "user", content: prompt },
-          ],
+          messages: formatGroqMessages(prompt, options),
           temperature: options.temperature ?? 0.2,
           stream: false,
         }),
@@ -104,10 +136,7 @@ export class GroqProvider implements AIProviderAdapter {
         },
         body: JSON.stringify({
           model: mod,
-          messages: [
-            { role: "system", content: getTemporalGroundingPrompt() },
-            { role: "user", content: prompt },
-          ],
+          messages: formatGroqMessages(prompt, options),
           temperature: options.temperature ?? 0.2,
           stream: true,
         }),

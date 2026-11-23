@@ -8,6 +8,8 @@ export interface CompletionOptions {
   temperature?: number;
   stream?: boolean;
   signal?: AbortSignal;
+  messages?: ChatMessage[];
+  systemInstruction?: string;
 }
 
 export interface CompletionResult {

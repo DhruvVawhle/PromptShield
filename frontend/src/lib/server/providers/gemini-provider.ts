@@ -19,6 +19,53 @@ export function getTemporalGroundingPrompt(): string {
   return `You are PromptShield's AI Security Assistant. Today's date is ${dateStr} (Current Year: ${now.getFullYear()}). When answering questions about upcoming movies, entertainment releases, technology launches, current events, or dates, always ground your answers relative to today's date (${dateStr}) and the current year (${now.getFullYear()}). Never present past years (such as 2024 or earlier) as upcoming or current.`;
 }
 
+function buildGeminiSystemInstruction(systemInstruction?: string): string {
+  const base = getTemporalGroundingPrompt();
+  return systemInstruction ? `${base}\n\n${systemInstruction}` : base;
+}
+
+function formatGeminiContents(
+  prompt: string,
+  messages?: CompletionOptions["messages"]
+): Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> {
+  if (!messages || messages.length === 0) {
+    return [
+      {
+        role: "user",
+        parts: [{ text: prompt }],
+      },
+    ];
+  }
+
+  const contents: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }> = [];
+  for (const msg of messages) {
+    if (!msg.content || !msg.content.trim()) continue;
+    const role: "user" | "model" = msg.role === "assistant" ? "model" : "user";
+    if (contents.length > 0 && contents[contents.length - 1].role === role) {
+      contents[contents.length - 1].parts[0].text += `\n\n${msg.content}`;
+    } else {
+      contents.push({ role, parts: [{ text: msg.content }] });
+    }
+  }
+
+  if (contents.length > 0 && contents[0].role !== "user") {
+    contents.shift();
+  }
+
+  if (contents.length === 0) {
+    contents.push({ role: "user", parts: [{ text: prompt }] });
+  } else {
+    const last = contents[contents.length - 1];
+    if (last.role !== "user") {
+      contents.push({ role: "user", parts: [{ text: prompt }] });
+    } else if (last.parts[0].text !== prompt && !last.parts[0].text.includes(prompt)) {
+      last.parts[0].text = prompt;
+    }
+  }
+
+  return contents;
+}
+
 export class GeminiProvider implements AIProviderAdapter {
   readonly id = "gemini";
   readonly name = "Google Gemini (Real-time Knowledge)";
@@ -62,14 +109,9 @@ export class GeminiProvider implements AIProviderAdapter {
           },
           body: JSON.stringify({
             systemInstruction: {
-              parts: [{ text: getTemporalGroundingPrompt() }],
+              parts: [{ text: buildGeminiSystemInstruction(options.systemInstruction) }],
             },
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: prompt }],
-              },
-            ],
+            contents: formatGeminiContents(prompt, options.messages),
             generationConfig: {
               temperature: options.temperature ?? 0.2,
             },
@@ -175,14 +217,9 @@ export class GeminiProvider implements AIProviderAdapter {
           },
           body: JSON.stringify({
             systemInstruction: {
-              parts: [{ text: getTemporalGroundingPrompt() }],
+              parts: [{ text: buildGeminiSystemInstruction(options.systemInstruction) }],
             },
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: prompt }],
-              },
-            ],
+            contents: formatGeminiContents(prompt, options.messages),
             generationConfig: {
               temperature: options.temperature ?? 0.2,
             },
