@@ -6,7 +6,15 @@ import {
 } from "@/lib/gemini";
 import type { AIProviderAdapter, CompletionOptions, CompletionResult } from "./provider-interface";
 
-const FALLBACK_MODELS = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash", "gemini-flash-lite-latest"];
+const FALLBACK_MODELS = [
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3-flash-preview",
+  "gemini-flash-latest",
+];
+
+let lastWorkingGeminiModel: string | null = null;
 
 export function getTemporalGroundingPrompt(): string {
   const now = new Date();
@@ -16,7 +24,11 @@ export function getTemporalGroundingPrompt(): string {
     month: "long",
     day: "numeric",
   });
-  return `You are PromptShield's AI Security Assistant. Today's date is ${dateStr} (Current Year: ${now.getFullYear()}). When answering questions about upcoming movies, entertainment releases, technology launches, current events, or dates, always ground your answers relative to today's date (${dateStr}) and the current year (${now.getFullYear()}). Never present past years (such as 2024 or earlier) as upcoming or current.`;
+  return `You are PromptShield's Intelligent AI Security Assistant equipped with real-time web knowledge and grounding. Today's date is ${dateStr} (Current Year: ${now.getFullYear()}).
+- Provide clear, direct, comprehensive, and well-structured answers using Markdown, bullet points, and code blocks where appropriate.
+- You have access to real-time knowledge and live web search data provided directly in the prompt. When search results or conversational context are provided, ALWAYS synthesize and use them directly to answer the user's specific query with factual accuracy.
+- Never state 'I do not have access to real-time information' or 'I cannot browse the internet' when search results, web data, or context are provided.
+- When answering questions about upcoming movies, entertainment releases, technology launches, current events, or dates, always ground your answers relative to today's date (${dateStr}) and the current year (${now.getFullYear()}). Never present past years (such as 2024 or earlier) as upcoming or current.`;
 }
 
 function buildGeminiSystemInstruction(systemInstruction?: string): string {
@@ -92,7 +104,12 @@ export class GeminiProvider implements AIProviderAdapter {
     }
 
     const targetModel = this.resolveModel(options.model, model);
-    const candidateModels = [targetModel, ...FALLBACK_MODELS.filter((m) => m !== targetModel)];
+    const orderedFallbacks = FALLBACK_MODELS.filter((m) => m !== targetModel);
+    const candidateModels = options.model
+      ? [targetModel, ...orderedFallbacks]
+      : lastWorkingGeminiModel && lastWorkingGeminiModel !== targetModel
+      ? [lastWorkingGeminiModel, targetModel, ...orderedFallbacks.filter((m) => m !== lastWorkingGeminiModel)]
+      : [targetModel, ...orderedFallbacks];
 
     let lastError: Error | null = null;
 
@@ -175,6 +192,7 @@ export class GeminiProvider implements AIProviderAdapter {
           }
         }
 
+        lastWorkingGeminiModel = currentModel;
         return {
           content,
           model: payload.modelVersion ?? currentModel,
@@ -198,7 +216,12 @@ export class GeminiProvider implements AIProviderAdapter {
     }
 
     const targetModel = this.resolveModel(options.model, model);
-    const candidateModels = [targetModel, ...FALLBACK_MODELS.filter((m) => m !== targetModel)];
+    const orderedFallbacks = FALLBACK_MODELS.filter((m) => m !== targetModel);
+    const candidateModels = options.model
+      ? [targetModel, ...orderedFallbacks]
+      : lastWorkingGeminiModel && lastWorkingGeminiModel !== targetModel
+      ? [lastWorkingGeminiModel, targetModel, ...orderedFallbacks.filter((m) => m !== lastWorkingGeminiModel)]
+      : [targetModel, ...orderedFallbacks];
 
     let activeResponse: Response | null = null;
     let selectedModel = targetModel;
@@ -270,6 +293,7 @@ export class GeminiProvider implements AIProviderAdapter {
 
         activeResponse = response;
         selectedModel = currentModel;
+        lastWorkingGeminiModel = currentModel;
         break;
       } catch (err) {
         lastError = err as Error;

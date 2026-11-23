@@ -7,7 +7,7 @@ export type GeminiHealthStatus =
   | "unconfigured";
 
 export const DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-export const DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview";
+export const DEFAULT_GEMINI_MODEL = "gemini-flash-lite-latest";
 
 export function getGeminiConfig() {
   const baseUrl = (

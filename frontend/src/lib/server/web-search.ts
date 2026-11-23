@@ -161,5 +161,5 @@ The following live search results were retrieved directly from the internet to e
 
 ${searchSnippets}
 ======================================================
-Please answer the prompt using the live search results above. Anchor your answer to the current date (${dateStr}) and current year (${now.getFullYear()}).`;
+Please answer the prompt directly and comprehensively using the live search results above. Synthesize the facts directly to answer the user's specific query. Do not state that you lack real-time access or cannot browse the internet; use the verified facts provided above. Anchor your answer to the current date (${dateStr}) and current year (${now.getFullYear()}).`;
 }

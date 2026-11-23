@@ -141,7 +141,30 @@ export async function POST(request: Request) {
     if (shouldSearch) {
       try {
         const { performWebSearch, buildSearchAugmentedPrompt } = await import("@/lib/server/web-search");
-        const searchResults = await performWebSearch(finalPrompt);
+
+        // Contextualize follow-up search queries using preceding conversation turns if present
+        let searchQuery = finalPrompt;
+        if (Array.isArray(body.messages) && body.messages.length > 1) {
+          const prevUserMsgs = body.messages
+            .filter((m) => m.role === "user" && m.content && m.content.trim() !== finalPrompt)
+            .map((m) => m.content!.trim());
+          if (prevUserMsgs.length > 0) {
+            const lastContext = prevUserMsgs[prevUserMsgs.length - 1];
+            if (
+              finalPrompt.length < 60 ||
+              /\b(who|what|where|when|why|how|hod|head|dean|principal|director|fee|fees|admission|cutoff|placement|ending|price|score|founder|ceo)\b/i.test(
+                finalPrompt
+              )
+            ) {
+              const cleanContext = lastContext.slice(0, 50).replace(/[?!.]+$/, "").trim();
+              if (cleanContext && !searchQuery.toLowerCase().includes(cleanContext.toLowerCase())) {
+                searchQuery = `${cleanContext} ${finalPrompt}`;
+              }
+            }
+          }
+        }
+
+        const searchResults = await performWebSearch(searchQuery);
         if (searchResults.length > 0) {
           searchResultCount = searchResults.length;
           finalPrompt = buildSearchAugmentedPrompt(finalPrompt, searchResults);
