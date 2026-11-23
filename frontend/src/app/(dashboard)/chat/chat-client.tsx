@@ -146,23 +146,33 @@ export function ChatClient() {
       const target = e.target as HTMLElement | null;
 
       // 2. Preserve scrolling inside the prompt textarea
-      const textarea = inputRef.current;
-      if (textarea && textarea.contains(target)) {
-        const { scrollTop, scrollHeight, clientHeight } = textarea;
-        const maxTextareaScroll = scrollHeight - clientHeight;
+      const textarea = inputRef.current || (target?.closest("textarea") as HTMLTextAreaElement | null);
+      if (textarea && (textarea === target || textarea.contains(target))) {
+        const { scrollTop, scrollHeight, clientHeight, scrollLeft, scrollWidth, clientWidth } = textarea;
+        const maxScrollY = scrollHeight - clientHeight;
+        const maxScrollX = scrollWidth - clientWidth;
 
-        if (maxTextareaScroll > 1) {
-          const isScrollingDown = e.deltaY > 0;
-          const isScrollingUp = e.deltaY < 0;
-          const canScrollDown = isScrollingDown && scrollTop < maxTextareaScroll - 1;
-          const canScrollUp = isScrollingUp && scrollTop > 1;
+        const isScrollingDown = e.deltaY > 0;
+        const isScrollingUp = e.deltaY < 0;
+        const canScrollY =
+          maxScrollY > 0 &&
+          ((isScrollingDown && scrollTop < maxScrollY - 0.5) ||
+           (isScrollingUp && scrollTop > 0.5));
 
-          if (canScrollDown || canScrollUp) {
-            // Textarea has room to scroll - allow native scrolling
-            return;
-          }
+        const isScrollingRight = e.deltaX > 0;
+        const isScrollingLeft = e.deltaX < 0;
+        const canScrollX =
+          maxScrollX > 0 &&
+          ((isScrollingRight && scrollLeft < maxScrollX - 0.5) ||
+           (isScrollingLeft && scrollLeft > 0.5));
+
+        if (canScrollY || canScrollX) {
+          // Textarea can consume wheel input in the requested direction natively
+          return;
         }
-        // At textarea scroll boundary, prevent leaking to outer window
+
+        // At textarea boundaries or when draft does not overflow:
+        // Prevent leaking to outer window
         e.preventDefault();
         return;
       }
