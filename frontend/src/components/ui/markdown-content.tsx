@@ -11,21 +11,21 @@ interface MarkdownContentProps {
   className?: string;
 }
 
-function CodeBlock({
-  inline,
-  className,
-  children,
-  ...props
-}: {
-  inline?: boolean;
-  className?: string;
-  children?: React.ReactNode;
-  [key: string]: any;
-}) {
+function PreBlock({ children }: React.ComponentPropsWithoutRef<"pre">) {
   const [copied, setCopied] = React.useState(false);
-  const match = /language-(\w+)/.exec(className || "");
+
+  // Extract code text and language from the inner <code> child passed by react-markdown
+  const codeElement = React.isValidElement(children) ? children : null;
+  const childProps = (codeElement?.props || {}) as {
+    className?: string;
+    children?: React.ReactNode;
+  };
+  const className = childProps.className || "";
+  const match = /language-(\w+)/.exec(className);
   const language = match ? match[1] : "";
-  const codeString = String(children).replace(/\n$/, "");
+  const codeString = String(
+    childProps.children ?? (typeof children === "string" ? children : "")
+  ).replace(/\n$/, "");
 
   const handleCopy = async () => {
     try {
@@ -36,17 +36,6 @@ function CodeBlock({
       // Clipboard write failed
     }
   };
-
-  if (inline) {
-    return (
-      <code
-        className="px-1.5 py-0.5 rounded-md font-mono text-[12px] bg-muted/80 text-foreground border border-border/50"
-        {...props}
-      >
-        {children}
-      </code>
-    );
-  }
 
   return (
     <div className="my-3 rounded-lg border border-border/70 bg-muted/30 overflow-hidden shadow-2xs">
@@ -71,12 +60,37 @@ function CodeBlock({
           )}
         </button>
       </div>
-      <pre data-lenis-prevent className="p-3.5 overflow-x-auto overscroll-x-contain text-[12px] font-mono leading-relaxed text-foreground">
-        <code className={className} {...props}>
-          {children}
-        </code>
+      <pre
+        data-lenis-prevent
+        className="p-3.5 overflow-x-auto overscroll-x-contain text-[12px] font-mono leading-relaxed text-foreground"
+      >
+        <code className={className}>{codeString}</code>
       </pre>
     </div>
+  );
+}
+
+function InlineCode({
+  children,
+  className,
+  node,
+  ...props
+}: {
+  children?: React.ReactNode;
+  className?: string;
+  node?: any;
+  [key: string]: any;
+}) {
+  return (
+    <code
+      className={cn(
+        "px-1.5 py-0.5 rounded-md font-mono text-[12px] bg-muted/80 text-foreground border border-border/50",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </code>
   );
 }
 
@@ -184,7 +198,8 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
               {children}
             </a>
           ),
-          code: CodeBlock as any,
+          pre: PreBlock as any,
+          code: InlineCode as any,
         }}
       >
         {content}
