@@ -114,6 +114,11 @@ PromptShield/
   - **2-Line SDK Drop-in Blueprint:** Transparent OpenAI SDK replacement across TypeScript, Python, and cURL by pointing `baseURL` directly to the PromptShield gateway.
   - **Gateway vs. Client-Side Guardrail Analysis:** Architectural comparison demonstrating why server-side edge proxies eliminate client-tampering vulnerabilities, token leakages, and malicious token billing.
 
+- **[`docs/VIBE_CODING_SECURITY_PLAYBOOK.md`](docs/VIBE_CODING_SECURITY_PLAYBOOK.md) — Vibe-Coding Security Playbook (14 Critical Vulnerabilities & Testing Guide):**
+  - Exhaustive penetration testing and hardening guide targeting common security blindspots in AI-scaffolded and hastily built web apps.
+  - Detailed breakdown across 3 core vectors: Access & Authentication Flaws (Type `/admin`, IDOR, Mass Assignment, OTP Brute-Force), Business Logic & Payment Bypasses (Client Price Tampering, Negative Quantities, Fake Payments, Concurrency/Race Conditions), and Client-Side/Data/AI Exposure (Browser API Keys, Direct/Indirect Prompt Injection, Stored XSS, Malicious File Uploads, Committed `.env`, SQL/NoSQL Injection).
+  - Complete with attacker testing methodologies (cURL, DevTools, Burp Suite), real-world exploit scripts, and a 10-point pre-flight production checklist.
+
 ---
 
 ## 🔌 API Reference
