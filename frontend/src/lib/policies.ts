@@ -85,41 +85,109 @@ export async function deletePolicy(id: string): Promise<void> {
   }
 }
 
+export async function fetchPolicies(): Promise<PolicyWithId[]> {
+  try {
+    const auth = getFirebaseAuth();
+    const token = await auth.currentUser?.getIdToken();
+    if (token) {
+      const res = await fetch("/api/v1/policies?includeSystem=true", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const policies: any[] = data.policies || [];
+        return policies.map((p) => ({
+          ...p,
+          updatedAt: p.updatedAt,
+        })) as PolicyWithId[];
+      }
+    }
+  } catch (err) {
+    console.warn("[fetchPolicies] Server fetch failed:", err);
+  }
+  return [];
+}
+
 export function subscribePolicies(
   uid: string,
   callback: (policies: PolicyWithId[]) => void,
   onError?: (error: Error) => void
 ): Unsubscribe {
-  const db = getFirebaseFirestore();
-  // Single-field where query avoids composite index requirement in Firestore
-  const q = query(
-    collection(db, POLICIES_COLLECTION),
-    where("uid", "==", uid)
-  );
+  let active = true;
 
-  return onSnapshot(
-    q,
-    (snap) => {
-      const policies = snap.docs.map(
-        (d) =>
-          ({
-            id: d.id,
-            ...(d.data() as Omit<Policy, "updatedAt"> & { updatedAt: Timestamp }),
-          } as PolicyWithId)
-      );
-      // In-memory sort by updatedAt descending
-      policies.sort((a, b) => {
-        const timeA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : new Date(a.updatedAt || 0).getTime();
-        const timeB = b.updatedAt instanceof Timestamp ? b.updatedAt.toMillis() : new Date(b.updatedAt || 0).getTime();
-        return timeB - timeA;
-      });
-      callback(policies);
-    },
-    (error) => {
-      if (onError) onError(error);
-      else console.error("policies subscription failed:", error);
+  const runFetch = async () => {
+    try {
+      const rows = await fetchPolicies();
+      if (active && rows.length > 0) {
+        callback(rows);
+      }
+    } catch (err) {
+      if (active && onError) {
+        onError(err as Error);
+      }
     }
-  );
+  };
+
+  void runFetch();
+
+  const intervalId = setInterval(() => {
+    if (active) void runFetch();
+  }, 4000);
+
+  const onFocus = () => {
+    if (active) void runFetch();
+  };
+  if (typeof window !== "undefined") {
+    window.addEventListener("focus", onFocus);
+  }
+
+  // Also maintain Firestore snapshot listener as auxiliary live channel if available
+  let firestoreUnsub: (() => void) | null = null;
+  try {
+    const db = getFirebaseFirestore();
+    const q = query(
+      collection(db, POLICIES_COLLECTION),
+      where("uid", "==", uid)
+    );
+    firestoreUnsub = onSnapshot(
+      q,
+      (snap) => {
+        if (!active || snap.empty) return;
+        const livePolicies = snap.docs.map(
+          (d) =>
+            ({
+              id: d.id,
+              ...(d.data() as Omit<Policy, "updatedAt"> & { updatedAt: Timestamp }),
+            } as PolicyWithId)
+        );
+        livePolicies.sort((a, b) => {
+          const timeA = a.updatedAt instanceof Timestamp ? a.updatedAt.toMillis() : new Date(a.updatedAt || 0).getTime();
+          const timeB = b.updatedAt instanceof Timestamp ? b.updatedAt.toMillis() : new Date(b.updatedAt || 0).getTime();
+          return timeB - timeA;
+        });
+        callback(livePolicies);
+      },
+      () => {}
+    );
+  } catch {
+    // Ignore client firestore listener failure
+  }
+
+  return () => {
+    active = false;
+    clearInterval(intervalId);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("focus", onFocus);
+    }
+    if (firestoreUnsub) {
+      firestoreUnsub();
+    }
+  };
 }
 
 export function formatRelativeTime(timestamp: PolicyWithId["updatedAt"]): string {

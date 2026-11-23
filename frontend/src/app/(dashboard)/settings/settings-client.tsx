@@ -56,16 +56,33 @@ export function SettingsClient({
   const { user } = useAuth();
   
   const [activeTab, setActiveTab] = React.useState("general");
-  const [settings, setSettings] = React.useState<SettingsState>(DEFAULT_SETTINGS);
-  const [initialSettings, setInitialSettings] = React.useState<SettingsState>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = React.useState<SettingsState>(() => {
+    if (typeof window === "undefined") return DEFAULT_SETTINGS;
+    try {
+      const storageKey = `promptshield_settings_${user?.uid || "guest"}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+    return DEFAULT_SETTINGS;
+  });
+  const [initialSettings, setInitialSettings] = React.useState<SettingsState>(settings);
   const [isSaving, setIsSaving] = React.useState(false);
 
   const hasChanges = JSON.stringify(settings) !== JSON.stringify(initialSettings);
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API call for saving preferences
-    await new Promise(resolve => setTimeout(resolve, 800));
+    try {
+      const storageKey = `promptshield_settings_${user?.uid || "guest"}`;
+      localStorage.setItem(storageKey, JSON.stringify(settings));
+    } catch {
+      // Ignore
+    }
+    await new Promise(resolve => setTimeout(resolve, 400));
     setInitialSettings(settings);
     setIsSaving(false);
   };

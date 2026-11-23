@@ -14,6 +14,57 @@ const VALID_CATEGORIES = [
   "Custom",
 ];
 
+const DEFAULT_SYSTEM_POLICIES = [
+  {
+    id: "sys_prompt_injection",
+    uid: "system",
+    name: "System Prompt Injection Guardrail",
+    description: "Detects and blocks adversarial instruction overrides, suffix-stripped root evasion, and jailbreaks.",
+    category: "Prompt Security",
+    action: "BLOCK",
+    status: "Active",
+    isSystem: true,
+    conditions: "Detects instruction overrides (ignore, override, bypass) with risk score >= 75.",
+    updatedAt: new Date(Date.now() - 86400000 * 30).toISOString(),
+  },
+  {
+    id: "sys_pii_redaction",
+    uid: "system",
+    name: "PII & Secret Sanitization Guardrail",
+    description: "Automatically masks credentials, API keys, private keys, credit cards, and SSNs from inbound prompts.",
+    category: "Data Protection",
+    action: "SANITIZE",
+    status: "Active",
+    isSystem: true,
+    conditions: "Matches high-entropy API keys (sk-, ghp-, AIza), credit card formats, SSNs, and passwords.",
+    updatedAt: new Date(Date.now() - 86400000 * 25).toISOString(),
+  },
+  {
+    id: "sys_jailbreak_defense",
+    uid: "system",
+    name: "Jailbreak Persona Neutralizer",
+    description: "Quarantines roleplay bypasses, DAN personas, and adversarial hypothetical framing.",
+    category: "Content Safety",
+    action: "BLOCK",
+    status: "Active",
+    isSystem: true,
+    conditions: "Flags persona hijacking (DAN, evil twin, unrestricted mode) and enforces closed failover.",
+    updatedAt: new Date(Date.now() - 86400000 * 20).toISOString(),
+  },
+  {
+    id: "sys_code_security",
+    uid: "system",
+    name: "Encoding & Obfuscation Inspector",
+    description: "Detects Base64, Hexadecimal, and Unicode zero-width evasion techniques.",
+    category: "Code Security",
+    action: "WARN",
+    status: "Active",
+    isSystem: true,
+    conditions: "Normalizes multi-layer obfuscation and alerts analysts on high-entropy evasion.",
+    updatedAt: new Date(Date.now() - 86400000 * 15).toISOString(),
+  },
+];
+
 export async function GET(req: Request) {
   try {
     const authResult = await authenticateAndAuthorize(req, "policies:read");
@@ -22,15 +73,20 @@ export async function GET(req: Request) {
     }
     const uid = authResult.uid;
 
+    const { searchParams } = new URL(req.url);
+    const includeSystem = searchParams.get("includeSystem") === "true";
+
     const policiesSnap = await adminDb.collection("policies")
       .where("uid", "==", uid)
       .orderBy("updatedAt", "desc")
       .get();
 
-    const policies = policiesSnap.docs.map((doc: any) => ({
+    const customPolicies = policiesSnap.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data()
     }));
+
+    const policies = includeSystem ? [...customPolicies, ...DEFAULT_SYSTEM_POLICIES] : customPolicies;
 
     return NextResponse.json({ policies });
   } catch (error: any) {

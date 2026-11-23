@@ -3,8 +3,8 @@ import { adminDb } from "@/lib/firebase-admin";
 import { authenticateAndAuthorize } from "@/lib/server/rbac";
 import { VALID_INCIDENT_STATUSES, type IncidentStatus } from "@/lib/incidents";
 
-const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 100;
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 500;
 const VALID_SEVERITIES = ["CRITICAL", "HIGH", "MODERATE", "MEDIUM", "LOW"] as const;
 
 export async function GET(req: Request) {
@@ -189,6 +189,10 @@ export async function GET(req: Request) {
           riskScore,
           riskLevel,
           threatCategory: primaryCategory,
+          threatDetected: Boolean(
+            data.threatDetected ??
+            (data.isMalicious || (categories && categories.length > 0) || riskScore >= 50)
+          ),
           categories,
           decision: data.decision || "ALLOW",
           status: (data.status as IncidentStatus) || "OPEN",
@@ -196,9 +200,16 @@ export async function GET(req: Request) {
           resolvedAt: data.resolvedAt || null,
           resolvedBy: data.resolvedBy || null,
           promptSnippet: data.promptSnippet || (typeof data.prompt === "string" ? data.prompt.slice(0, 200) : null),
+          prompt: data.prompt || data.promptSnippet || null,
+          sanitizedPrompt: data.sanitizedPrompt ?? null,
           triggeredRuleIds: Array.isArray(data.triggeredRuleIds) ? data.triggeredRuleIds : [],
           policyId: data.policyId || data.policy || null,
+          policy: data.policy || data.policyId || "Default Guardrail Policy",
           latencyMs: typeof data.latencyMs === "number" ? data.latencyMs : null,
+          confidence: typeof data.confidence === "number" ? data.confidence : null,
+          model: data.model || "promptshield-v1",
+          promptLength: typeof data.promptLength === "number" ? data.promptLength : (data.prompt?.length || 0),
+          uid: data.uid || uid,
         };
       })
       .filter((inc: any) => {

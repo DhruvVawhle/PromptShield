@@ -7,6 +7,7 @@ import { Panel } from "@/components/ui/panel";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   subscribePolicies,
+  fetchPolicies,
   createPolicy,
   updatePolicy,
   deletePolicy,
@@ -143,6 +144,8 @@ export function PoliciesClient() {
         showNotification(`Policy "${formName}" created successfully.`);
       }
       setIsModalOpen(false);
+      const refreshed = await fetchPolicies();
+      if (refreshed.length > 0) setPolicies(refreshed);
     } catch (err: unknown) {
       showNotification(err instanceof Error ? err.message : "Failed to save policy", "error");
     }
@@ -157,6 +160,8 @@ export function PoliciesClient() {
     try {
       await updatePolicy(policy.id, { status: newStatus });
       showNotification(`Policy "${policy.name}" set to ${newStatus}.`);
+      const refreshed = await fetchPolicies();
+      if (refreshed.length > 0) setPolicies(refreshed);
     } catch (err: unknown) {
       showNotification(err instanceof Error ? err.message : "Failed to toggle status", "error");
     }
@@ -177,6 +182,8 @@ export function PoliciesClient() {
       await deletePolicy(deleteTarget.id);
       showNotification(`Policy "${deleteTarget.name}" deleted successfully.`);
       setDeleteTarget(null);
+      const refreshed = await fetchPolicies();
+      setPolicies(refreshed);
     } catch (err: unknown) {
       showNotification(err instanceof Error ? err.message : "Failed to delete policy", "error");
     } finally {

@@ -11,7 +11,7 @@ import {
   type Unsubscribe,
   type QueryConstraint,
 } from "firebase/firestore";
-import { getFirebaseFirestore } from "./firebase";
+import { getFirebaseFirestore, getFirebaseAuth } from "./firebase";
 import type { SecurityDecision } from "./demo/promptAnalyzer";
 
 import type { IncidentStatus } from "./incidents";
@@ -98,31 +98,92 @@ export async function listSecurityEvents(
     endDate?: Date;
   } = {}
 ): Promise<SecurityEventWithId[]> {
-  const db = getFirebaseFirestore();
-  // Using single-field where query to avoid any composite index requirement in Firestore
-  const constraints: QueryConstraint[] = [where("uid", "==", uid)];
+  try {
+    const auth = getFirebaseAuth();
+    const token = await auth.currentUser?.getIdToken();
 
-  const q = query(collection(db, SECURITY_EVENTS_COLLECTION), ...constraints);
-  const snap = await getDocs(q);
-  let events = snap.docs.map(parseEventDoc);
+    if (token) {
+      const queryParams = new URLSearchParams();
+      queryParams.set("limit", String(options.limit ?? 100));
+      if (options.startDate) queryParams.set("startDate", options.startDate.toISOString());
+      if (options.endDate) queryParams.set("endDate", options.endDate.toISOString());
 
-  // In-memory sort by timestamp descending ensures 100% reliable ordering without index errors
-  events.sort((a, b) => eventDate(b).getTime() - eventDate(a).getTime());
+      const res = await fetch(`/api/v1/incidents?${queryParams.toString()}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
 
-  if (options.startDate || options.endDate) {
-    events = events.filter((ev) => {
-      const d = eventDate(ev);
-      if (options.startDate && d < options.startDate) return false;
-      if (options.endDate && d > options.endDate) return false;
-      return true;
-    });
+      if (res.ok) {
+        const data = await res.json();
+        const incidents: any[] = data.incidents || [];
+        let mapped: SecurityEventWithId[] = incidents.map((inc) => ({
+          id: inc.id,
+          uid: inc.uid || uid,
+          promptId: inc.promptId || inc.id,
+          timestamp: inc.timestamp,
+          riskScore: typeof inc.riskScore === "number" ? inc.riskScore : 0,
+          threatDetected: Boolean(inc.threatDetected ?? (inc.riskScore >= 50 || inc.threatCategory)),
+          threatCategory: inc.threatCategory || null,
+          decision: inc.decision || "ALLOW",
+          policy: inc.policy || "Default Guardrail Policy",
+          confidence: typeof inc.confidence === "number" ? inc.confidence : null,
+          promptLength: inc.promptLength || (inc.prompt?.length ?? (inc.promptSnippet?.length ?? 0)),
+          model: inc.model || "promptshield-v1",
+          prompt: inc.prompt || inc.promptSnippet || null,
+          promptSnippet: inc.promptSnippet || inc.prompt || null,
+          sanitizedPrompt: inc.sanitizedPrompt ?? null,
+          status: inc.status || "OPEN",
+          resolutionNotes: inc.resolutionNotes || null,
+          resolvedAt: inc.resolvedAt || null,
+          resolvedBy: inc.resolvedBy || null,
+        }));
+
+        mapped.sort((a, b) => eventDate(b).getTime() - eventDate(a).getTime());
+        if (options.startDate || options.endDate) {
+          mapped = mapped.filter((ev) => {
+            const d = eventDate(ev);
+            if (options.startDate && d < options.startDate) return false;
+            if (options.endDate && d > options.endDate) return false;
+            return true;
+          });
+        }
+        if (options.limit) {
+          mapped = mapped.slice(0, options.limit);
+        }
+        return mapped;
+      }
+    }
+  } catch (err) {
+    console.warn("[listSecurityEvents] Failed to fetch from API, falling back:", err);
   }
 
-  if (options.limit) {
-    events = events.slice(0, options.limit);
+  // Fallback to client Firestore query if available
+  try {
+    const db = getFirebaseFirestore();
+    const constraints: QueryConstraint[] = [where("uid", "==", uid)];
+    const q = query(collection(db, SECURITY_EVENTS_COLLECTION), ...constraints);
+    const snap = await getDocs(q);
+    let events = snap.docs.map(parseEventDoc);
+    events.sort((a, b) => eventDate(b).getTime() - eventDate(a).getTime());
+    if (options.startDate || options.endDate) {
+      events = events.filter((ev) => {
+        const d = eventDate(ev);
+        if (options.startDate && d < options.startDate) return false;
+        if (options.endDate && d > options.endDate) return false;
+        return true;
+      });
+    }
+    if (options.limit) {
+      events = events.slice(0, options.limit);
+    }
+    return events;
+  } catch (err) {
+    console.error("Failed to query security events fallback:", err);
+    return [];
   }
-
-  return events;
 }
 
 export function subscribeSecurityEvents(
@@ -135,39 +196,44 @@ export function subscribeSecurityEvents(
   callback: (events: SecurityEventWithId[]) => void,
   onError?: (error: Error) => void
 ): Unsubscribe {
-  const db = getFirebaseFirestore();
-  // Single-field constraint guarantees real-time sync with zero composite index dependencies
-  const constraints: QueryConstraint[] = [where("uid", "==", uid)];
+  let active = true;
 
-  const q = query(collection(db, SECURITY_EVENTS_COLLECTION), ...constraints);
-  return onSnapshot(
-    q,
-    (snap) => {
-      let events = snap.docs.map(parseEventDoc);
-
-      // In-memory sort by timestamp descending
-      events.sort((a, b) => eventDate(b).getTime() - eventDate(a).getTime());
-
-      if (options.startDate || options.endDate) {
-        events = events.filter((ev) => {
-          const d = eventDate(ev);
-          if (options.startDate && d < options.startDate) return false;
-          if (options.endDate && d > options.endDate) return false;
-          return true;
-        });
+  const runFetch = async () => {
+    try {
+      const rows = await listSecurityEvents(uid, options);
+      if (active) {
+        callback(rows);
       }
-
-      if (options.limit) {
-        events = events.slice(0, options.limit);
+    } catch (e) {
+      if (active && onError) {
+        onError(e as Error);
       }
-
-      callback(events);
-    },
-    (error) => {
-      if (onError) onError(error);
-      else console.error("security_events subscription failed:", error);
     }
-  );
+  };
+
+  // Immediate initial load
+  void runFetch();
+
+  // Poll every 3.5s to capture newly analyzed prompts or chat interactions in real time
+  const intervalId = setInterval(() => {
+    if (active) void runFetch();
+  }, 3500);
+
+  // Also refetch when window regains focus
+  const onFocus = () => {
+    if (active) void runFetch();
+  };
+  if (typeof window !== "undefined") {
+    window.addEventListener("focus", onFocus);
+  }
+
+  return () => {
+    active = false;
+    clearInterval(intervalId);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("focus", onFocus);
+    }
+  };
 }
 
 export function getPeriodDateRange(period: "7d" | "4w" | "30d"): { start: Date; end: Date } {

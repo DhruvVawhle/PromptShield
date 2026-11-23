@@ -20,6 +20,7 @@ import {
   Send,
   Terminal,
   ArrowUpRight,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Panel } from "@/components/ui/panel";
@@ -56,8 +57,47 @@ export type Message = {
 
 export function ChatClient() {
   const { user } = useAuth();
-  const [messages, setMessages] = React.useState<Message[]>([]);
+  const [messages, setMessages] = React.useState<Message[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const storageKey = `promptshield_chat_history_${user?.uid || "guest"}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+    return [];
+  });
   const [draft, setDraft] = React.useState("");
+
+  // Persist chat history to local storage on update
+  React.useEffect(() => {
+    try {
+      const storageKey = `promptshield_chat_history_${user?.uid || "guest"}`;
+      if (messages.length > 0) {
+        localStorage.setItem(storageKey, JSON.stringify(messages));
+      } else {
+        localStorage.removeItem(storageKey);
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [messages, user?.uid]);
+
+  const clearChat = () => {
+    setMessages([]);
+    try {
+      const storageKey = `promptshield_chat_history_${user?.uid || "guest"}`;
+      localStorage.removeItem(storageKey);
+    } catch {
+      // Ignore
+    }
+  };
   const [selectedProvider, setSelectedProvider] = React.useState<"hybrid" | "gemini" | "groq">("hybrid");
   const [webSearchEnabled, setWebSearchEnabled] = React.useState(true);
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -301,6 +341,17 @@ export function ChatClient() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={clearChat}
+                className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-card px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                title="Clear conversation history"
+              >
+                <Trash2 className="h-3 w-3" />
+                <span>Clear History</span>
+              </button>
+            )}
             <span className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-muted/40 px-2.5 py-1 text-xs font-mono text-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               <span>Gating Active</span>

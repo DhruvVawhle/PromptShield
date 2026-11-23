@@ -2,6 +2,7 @@ node_modules
 .kilo
 .env*.local
 .env.local
+.data/
 
 # Internal documentation
 00_SOURCE_NOTES.md
