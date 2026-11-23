@@ -333,7 +333,12 @@ class MemoryFirestore {
 
   batch() {
     const ops: Array<() => Promise<void>> = [];
-    const self = this;
+    const commit = async () => {
+      for (const op of ops) {
+        await op();
+      }
+      this.persistToDisk();
+    };
     return {
       set(docRef: any, data: any, options?: any) {
         ops.push(async () => {
@@ -347,12 +352,7 @@ class MemoryFirestore {
         });
         return this;
       },
-      async commit() {
-        for (const op of ops) {
-          await op();
-        }
-        self.persistToDisk();
-      },
+      commit,
     };
   }
 }
