@@ -25,7 +25,7 @@ jobs:
       GROQ_API_KEY: gsk_fake_ci_key_for_testing_only
       GROQ_MODEL: qwen/qwen3.8-27b
       GEMINI_API_KEY: fake-gemini-ci-key-for-testing-only
-      GEMINI_MODEL: gemini-3-flash-preview
+      GEMINI_MODEL: gemini-flash-lite-latest
       GEMINI_BASE_URL: https://generativelanguage.googleapis.com/v1beta
       AUDIT_SIGNING_KEY: ci-test-deterministic-signing-secret-key-32b
       RATE_LIMIT_ALLOW_FALLBACK: "true"

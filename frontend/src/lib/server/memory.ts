@@ -219,14 +219,14 @@ export async function handleMemoryIntent(
   // 1. SAVE: "Remember this for all future conversations: [details]. Confirm once you've saved it to your memory."
   const saveMatch =
     trimmed.match(
-      /(?:remember\s+(?:this\s+)?(?:for\s+all\s+future\s+(?:conversations|chats)|permanently|across\s+chats|in\s+(?:your\s+)?memory)[\s:]+|remember\s+that[\s:]+|save\s+(?:this\s+)?to\s+(?:my\s+|persistent\s+)?memory[\s:]+)(.+)$/is
+      /(?:remember\s+(?:this\s+)?(?:for\s+all\s+future\s+(?:conversations|chats)|permanently|across\s+chats|in\s+(?:your\s+)?memory)[\s:]+|remember\s+that[\s:]+|save\s+(?:this\s+)?to\s+(?:my\s+|persistent\s+)?memory[\s:]+)([\s\S]+)$/i
     );
 
   if (saveMatch && saveMatch[1]) {
     let rawContent = saveMatch[1].trim();
 
     // Remove confirmation requests like "Confirm once you've saved it to your memory."
-    rawContent = rawContent.replace(/\.?\s*(?:confirm\s+once\s+you(?:'ve|\s+have)\s+saved\s+it.*|confirm\s+once\s+saved.*|please\s+confirm.*)$/is, "").trim();
+    rawContent = rawContent.replace(/\.?\s*(?:confirm\s+once\s+you(?:'ve|\s+have)\s+saved\s+it[\s\S]*|confirm\s+once\s+saved[\s\S]*|please\s+confirm[\s\S]*)$/i, "").trim();
 
     // Clean up surrounding brackets or placeholders: [insert your preference, e.g., I live in Mumbai...]
     let cleanText = rawContent;
