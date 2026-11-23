@@ -4,7 +4,7 @@
 
 PromptShield is an enterprise-grade AI security gateway and management platform built on Next.js 16. Every inbound prompt is normalized, analyzed for adversarial threats, evaluated against deterministic custom security policies, scored for risk (0–100), and enforced (`ALLOW`, `WARN`, `SANITIZE`, or `BLOCK`) before it reaches underlying language models or external tools.
 
-Featuring a **Hybrid Multi-Provider AI Gateway**, PromptShield intelligently combines **Google Gemini** (for live, up-to-date real-world knowledge via `gemini-3-flash-preview` at ~1.7s) and **Groq LPUs** (for ultra-fast sub-500ms inference on `qwen/qwen3.8-27b` or 120B reasoning on `openai/gpt-oss-120b`), with automatic bi-directional failover, in-chat security inspection telemetry, and historical cutoff disclaimer guardrails.
+Featuring a **Hybrid Multi-Provider AI Gateway**, PromptShield intelligently combines **Google Gemini** (for live, real-time world knowledge via `gemini-flash-lite-latest` at ~1.1s) and **Groq LPUs** (for ultra-fast sub-500ms inference on `qwen/qwen3.8-27b` or 120B reasoning on `openai/gpt-oss-120b`), with automatic model-level fallback caching, cross-chat persistent AI memory, multi-turn context retention, in-chat security telemetry, and scroll-isolated conversation panels.
 
 ---
 
@@ -17,8 +17,10 @@ Featuring a **Hybrid Multi-Provider AI Gateway**, PromptShield intelligently com
 | **Track** | Full Prompt Auditing & Tracking | Real-time preservation of user prompts across Cloud Firestore, Dashboard Recent Events, and Incident Triage with one-click re-analysis, while stripping credentials via `redactSensitiveContent`. |
 | **Enforce** | Guardrail Policies | Strictest-action-wins deterministic precedence engine with customizable risk thresholds and action overrides (`BLOCK`, `SANITIZE`, `WARN`, `ALLOW`). |
 | **Search** | Real-Time Web Search Grounding | Zero-dependency real-time internet search engine (`web-search.ts`) with dual-engine fallback (DuckDuckGo HTML parser + Wikipedia Search API), automated recency query detection, interactive chat toggle, and grounded temporal context (anchoring to current year 2026). |
-| **Gateway** | Hybrid Multi-Provider Routing | Intelligent router directing real-time/current data queries to Google Gemini (`gemini-3-flash-preview` at ~1.7s) and low-latency reasoning tasks to Groq (`qwen/qwen3.8-27b` at 460ms or `openai/gpt-oss-120b` at 1.3s), with transparent failover and rich in-chat telemetry headers. |
+| **Memory** | Persistent AI Memory & Context | Cross-chat persistent memory (`memory.ts`) stored in Firestore with automatic disk fallback. Supports explicit intent directives (`Remember this...`, `List memories...`, `Summarize context...`, `Forget...`), multi-turn dialogue context retention, and automated system prompt grounding. |
+| **Gateway** | Hybrid Multi-Provider Routing | Intelligent router directing real-time/current data queries to Google Gemini (`gemini-flash-lite-latest` at ~1.1s) and low-latency reasoning tasks to Groq (`qwen/qwen3.8-27b` at 460ms or `openai/gpt-oss-120b` at 1.3s), with transparent failover and rich in-chat telemetry headers. |
 | **Chat** | AI Security Assistant | Real-time gated chat interface featuring rich Markdown rendering (`react-markdown` + `remark-gfm` with clean headings, bold formatting, bullet lists, syntax code copy, and raw markdown view toggle), dynamic fluid 3-dot wave typing animations, and in-chat security telemetry: decision badges (`ALLOW`, `WARN`, `SANITIZE`, `BLOCK`), live risk scoring (0-100), provider attribution, execution latency, and expandable telemetry drawers detailing enforced policies, inspected threat categories, and sanitized forwarding diffs. |
+| **Isolation**| Chat Scroll Isolation | Strict viewport scroll isolation (`data-lenis-prevent`, `overscroll-behavior: contain`, isolated wheel event dispatcher). When mouse cursor is within the chat workspace, wheel scrolling is strictly isolated to chat messages without leaking or scrolling the outer page. Outside the chat, full-page smooth scrolling and custom magnetic follower cursor operate across the entire website. |
 | **Audit** | Immutable Audit Trail | Automatic, tamper-resistant audit logging for policy mutations, security decisions, unauthorized access attempts, and incident triaging with RFC 8785 canonical JSON and HMAC-SHA256 hash chaining. |
 | **Triage** | Incident Resolution | End-to-end incident management with status lifecycle tracking (`OPEN`, `INVESTIGATING`, `RESOLVED`, `FALSE_POSITIVE`) and sanitized resolution notes. |
 | **Diagnose** | Platform Telemetry | Continuous bounded liveness and readiness probes across Firestore, Upstash Redis, Google Gemini, Groq AI Engine, and the compiled rule engine. |
@@ -60,6 +62,7 @@ PromptShield/
 │   │   │       ├── health/    # GET /api/health/gemini, /api/health/groq, /api/health/omniroute
 │   │   │       └── v1/
 │   │   │           ├── analyze/       # POST /api/v1/analyze (Security Engine)
+│   │   │           ├── memory/        # GET, POST, DELETE /api/v1/memory (Cross-chat persistent AI memory)
 │   │   │           ├── policies/      # GET, POST, PUT, DELETE /api/v1/policies
 │   │   │           ├── audit-logs/    # GET /api/v1/audit-logs
 │   │   │           ├── audit-logs/verify/ # POST /api/v1/audit-logs/verify
@@ -76,6 +79,7 @@ PromptShield/
 │   │   └── lib/
 │   │       ├── server/        # Server-only modules (Firebase Admin, Security Engine, Normalizer, Rules)
 │   │       │   ├── security-engine.ts
+│   │       │   ├── memory.ts      # Persistent AI memory engine & context summarizer
 │   │       │   ├── policy-evaluator.ts
 │   │       │   ├── policy-manager.ts
 │   │       │   ├── persistence.ts
@@ -203,10 +207,25 @@ Reports process liveness and bounded dependency readiness probes (`≤ 3000ms` t
 
 ---
 
-### 7. Hybrid AI Inference Gateway API
+### 7. Cross-Chat AI Persistent Memory & Context API
+- **`GET /api/v1/memory`** — Retrieve all persistent memory items saved for the authenticated user (requires Bearer auth).
+- **`POST /api/v1/memory`** — Save a permanent memory item (`{ "memory": "I live in Mumbai and code in Python" }`).
+- **`DELETE /api/v1/memory`** — Forget a specific memory topic via `?topic=Python`, or clear all user memories via `?all=true`.
+
+Supported in-chat natural language directives:
+1. **Save preference**: *"Remember this for all future conversations: [preference]"*
+2. **Audit memory**: *"List everything you currently have saved in your memory about me and my preferences."*
+3. **Summarize context**: *"Summarize our entire conversation so far, including all key decisions, facts, and context..."*
+4. **Forget detail**: *"Forget what you know about [topic] from your saved memory."*
+
+---
+
+### 8. Hybrid AI Inference Gateway API
 #### `POST /api/ai`
 Proxies validated prompts through the **PromptShield Hybrid Gateway**:
-- **Automatic Routing:** Routes real-time, current-affairs, and entertainment queries (e.g. *upcoming releases, live events, sports, elections, prices*) to **Google Gemini** (`gemini-3-flash-preview` at ~1.7s, avoiding 503 high-demand load spikes). Routes fast reasoning, code analysis, and standard Q&A to **Groq LPUs** (`qwen/qwen3.8-27b` at 460ms or `openai/gpt-oss-120b` at 1.3s).
+- **Automatic Routing:** Routes real-time, current-affairs, and entertainment queries (e.g. *upcoming releases, live events, sports, elections, prices*) to **Google Gemini** (`gemini-flash-lite-latest` at ~1.1s with process-level model fallback caching). Routes fast reasoning, code analysis, and standard Q&A to **Groq LPUs** (`qwen/qwen3.8-27b` at 460ms or `openai/gpt-oss-120b` at 1.3s).
+- **Multi-Turn Context Window:** Ingests conversation history (`messages: [{ role, content }]`) to maintain full dialogue context across turns.
+- **Contextual Search Query Formulation:** Follow-up questions (e.g. *"who is hod of computer dept"* after querying an institution) automatically synthesize subjects from recent turns for high-precision live web search grounding.
 - **Live Internet Web Search Grounding:** Supports zero-dependency real-time internet search grounding (`web-search.ts`). When callers pass `"search": true` (or when recency queries are auto-detected), the gateway queries DuckDuckGo and Wikipedia with a strict 3.5s timeout, parsing and injecting up-to-date web snippets into the model prompt anchored to the current year (2026).
 - **Provider Override:** Callers can explicitly specify `"provider": "gemini"`, `"provider": "groq"`, or `"provider": "hybrid"`.
 - **Pre-Execution Enforcement:** Prompts evaluated as `BLOCK` terminate immediately (`403 Forbidden`) and never reach any provider. Prompts evaluated as `SANITIZE` pass only stripped safe text.
@@ -223,6 +242,8 @@ Proxies validated prompts through the **PromptShield Hybrid Gateway**:
   - `X-AI-Routing-Reason`: Reason for routing choice (`recency_detected`, `low_latency_default`, `failover`)
   - `X-Web-Search`: `enabled` when live search grounding was performed
   - `X-Web-Search-Results`: Number of live search snippets injected
+  - `X-Memory-Action`: Memory operation performed (`saved`, `audited`, `summarized`, `forgotten`)
+  - `X-Memory-Active`: Count of persistent memories currently injected into model context
   - `X-Response-Time-Ms`: Round-trip execution latency in milliseconds
 
 ---
@@ -280,7 +301,7 @@ GROQ_MODEL=qwen/qwen3.8-27b # or openai/gpt-oss-120b for 120B reasoning
 
 # Google Gemini AI Engine Configuration
 GEMINI_API_KEY=your_gemini_api_key
-GEMINI_MODEL=gemini-3-flash-preview
+GEMINI_MODEL=gemini-flash-lite-latest
 GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 
 # Cryptographic Audit Signing Key
@@ -314,7 +335,7 @@ Open **http://localhost:3000** in your browser.
 
 ## 🧪 Testing & Verification
 
-PromptShield includes an extensive, zero-mock/high-fidelity automated test suite validating the entire security architecture across 14 test files and 20 test suites:
+PromptShield includes an extensive, zero-mock/high-fidelity automated test suite validating the entire security architecture across 15 test files and 26 test suites:
 
 | Test File | Test Suite Focus | Test Cases |
 |:---|:---|:---:|
@@ -326,27 +347,28 @@ PromptShield includes an extensive, zero-mock/high-fidelity automated test suite
 | `e2e-workflow.test.ts` | End-to-end lifecycle: Auth -> Policy CRUD -> Analyze -> Incident Triage -> Audit Verification -> Health Check | 6 |
 | `gemini-provider.test.ts` | Google Gemini provider: non-streaming, SSE chunk parsing, intelligent recency routing, failover resilience | 10 |
 | `incidents.test.ts` | Incident triaging lifecycle, status transitions, resolution notes sanitization, IDOR protection | 19 |
+| `memory.test.ts` | Cross-chat persistent memory: preference saving, memory auditing, context window handover summarization, topic forgetting, system prompt injection | 11 |
 | `policies.test.ts` | Policy CRUD, action/status validation, deterministic tiebreak, atomic audit transaction | 15 |
 | `rate-limiter.test.ts` | Production fail-closed resilience, Cloudflare/Proxy header extraction, anti-spoofing, concurrent bursts | 7 |
 | `rbac.test.ts` | 4 Role tiers (SUPER_ADMIN, ADMIN, SECURITY_ANALYST, VIEWER), privilege escalation prevention, cross-tenant IDOR | 10 |
 | `security-engine.test.ts` | Core normalization, morphological stemmer, 11 attack categories, heuristic scoring, edge cases | 38 |
 | `system-status.test.ts` | Multi-dependency health diagnostics (database, cache, AI provider, engine), TTL caching, timeout handling | 8 |
 | `web-search.test.ts` | Real-time web search grounding: HTML snippet extraction, search augmentation formatting, current year anchoring, network failure resilience | 5 |
-| **Total** | **14 Test Files · 20 Test Suites · 0 Skipped · 0 Duplicated** | **173** |
+| **Total** | **15 Test Files · 26 Test Suites · 0 Skipped · 0 Duplicated** | **184** |
 
 ### Running Synchronous Quality Gates
 
 ```bash
-# 1. Run all 173 automated tests synchronously
+# 1. Run all 184 automated tests synchronously
 npm test
 
 # 2. Run TypeScript strict type-check (0 errors)
-npx --prefix frontend tsc --project frontend/tsconfig.json --noEmit
+npx --prefix frontend tsc --noEmit
 
 # 3. Run ESLint code quality check (0 errors)
 npm run lint
 
-# 4. Run Next.js Production Build (Compiles all 38 routes in Turbopack)
+# 4. Run Next.js Production Build (Compiles all 39 routes in Turbopack)
 npm run build
 ```
 
@@ -384,7 +406,7 @@ npm run build
 | Graphics & Charts | Three.js, Recharts, Lucide Icons |
 | Backend & Auth | Firebase Admin SDK, Firebase Auth, Cloud Firestore |
 | Rate Limiting | Upstash Redis & `@upstash/ratelimit` |
-| AI Inference Engines | [Google Gemini](https://ai.google.dev/) (`gemini-3-flash-preview`) & [Groq](https://groq.com/) (`qwen/qwen3.8-27b`, `openai/gpt-oss-120b`) |
+| AI Inference Engines | [Google Gemini](https://ai.google.dev/) (`gemini-flash-lite-latest`) & [Groq](https://groq.com/) (`qwen/qwen3.8-27b`, `openai/gpt-oss-120b`) |
 
 ---
 
